@@ -1,4 +1,7 @@
 absl-py==2.1.0
+aiohappyeyeballs==2.6.1
+aiohttp==3.11.13
+aiosignal==1.3.2
 anyio==4.8.0
 appnope==0.1.4
 argon2-cffi==23.1.0
@@ -17,9 +20,11 @@ charset-normalizer==3.4.1
 comm==0.2.2
 contourpy==1.3.1
 cycler==0.12.1
+datasets==3.3.2
 debugpy==1.8.12
 decorator==5.2.1
 defusedxml==0.7.1
+dill==0.3.8
 executing==2.2.0
 fastjsonschema==2.21.1
 fasttext @ git+https://github.com/facebookresearch/fastText.git@1142dc4c4ecbc19cc16eee5cdd28472e689267e6
@@ -27,7 +32,8 @@ filelock==3.17.0
 flatbuffers==25.2.10
 fonttools==4.56.0
 fqdn==1.5.1
-fsspec==2025.2.0
+frozenlist==1.5.0
+fsspec==2024.12.0
 gast==0.6.0
 google-pasta==0.2.0
 grpcio==1.70.0
@@ -73,6 +79,8 @@ mdurl==0.1.2
 mistune==3.1.2
 ml-dtypes==0.4.1
 mpmath==1.3.0
+multidict==6.1.0
+multiprocess==0.70.16
 namex==0.0.8
 nbclient==0.10.2
 nbconvert==7.16.6
@@ -94,11 +102,13 @@ pillow==11.1.0
 platformdirs==4.3.6
 prometheus_client==0.21.1
 prompt_toolkit==3.0.50
+propcache==0.3.0
 protobuf==5.29.3
 psutil==7.0.0
 ptyprocess==0.7.0
 pure_eval==0.2.3
 py4j==0.10.9.7
+pyarrow==19.0.1
 pybind11==2.13.6
 pycparser==2.22
 Pygments==2.19.1
@@ -153,3 +163,5 @@ Werkzeug==3.1.3
 wheel==0.45.1
 widgetsnbextension==4.0.13
 wrapt==1.17.2
+xxhash==3.5.0
+yarl==1.18.3
