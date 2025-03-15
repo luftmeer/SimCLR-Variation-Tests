@@ -1,0 +1,2 @@
+#{'encoder': 'resnet18', 'optimizer': 'Adam', 'batch_size': 32, 'image_augments': 2, 'image_resize': 224, 'epochs': 100, 'start_epoch': 0, 'projection_dim': 128, 'dataset_name': 'CIFAR10', 'resume': True, 'checkpoint': None, 'seed': 42, 'train': False, 'HF_TOKEN': None}
+Epoch,Loss,Elapsed Time
