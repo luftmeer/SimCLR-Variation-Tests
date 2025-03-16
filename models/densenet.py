@@ -9,7 +9,7 @@
 from torchvision import models
 DENSENET_ENCODERS = ['densenet121']
 
-def get_densenet(name: str) -> models.densenet.DenseNet:
+def get_densenet(name: str, widening: int) -> models.densenet.DenseNet:
     densenets = {
         "densenet121": models.densenet121(),
     }
