@@ -27,7 +27,7 @@ def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: o
                 # +1 since, when starting again, the algorithm should continue with the next epoch and not 'redo' this one
                 "model_state_dict": model.state_dict(),
                 "optimizer": optimizer.state_dict(),
-                "loss": loss.state_dict(),
+                #"loss": loss.state_dict(),
                 "args": args,
                 "dataset_name": dataset_name,
                 "csv_metric": csv_metric,
