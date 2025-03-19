@@ -67,7 +67,7 @@ def main(args):
         csv_metric.end()
         print(f'Epoch {epoch+1} | Loss: {loss_epoch}')
         csv_metric.write(epoch=epoch, loss=loss_epoch)
-        if epoch % 10 == 0:
+        if (epoch+1) % args.save_every_epoch == 0:
             print(f"Saving model at Epoch {epoch+1}")
             loader.save_model(model=model, optimizer=optimizer, loss=loss, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args, csv_metric=csv_metric)
     
