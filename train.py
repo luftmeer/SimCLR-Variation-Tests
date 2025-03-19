@@ -10,7 +10,7 @@ from models import resnet, densenet
 import tqdm
 from utils.dataset_loader import get_dataset
 from utils import loader, csv_metrics
-
+import yaml
 
 
 def main(args):
@@ -27,7 +27,7 @@ def main(args):
     
     
     
-    train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.train, image_size=args.image_resize, augmentations=args.image_augments, HF_TOKEN=args.HF_TOKEN)
+    train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN)
 
     train_loader = torch.utils.data.DataLoader(
             train_dataset,
@@ -40,7 +40,7 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     encoder, n_features = get_encoder(args.encoder)
 
-    model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.image_resize, batch_size=args.batch_size, device=device).to(device)
+    model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=device).to(device)
     loss_fn = NTXentLoss(batch_size=args.batch_size).to(device)
     
     if args.optimizer == 'Adam':
@@ -81,69 +81,19 @@ if __name__ == '__main__':
         description="Adjusted SimCLR implementation to analyse input variations",
     )
     
-    # Encoder choice
-    parser.add_argument(
-        '--encoder', type=str, choices=resnet.RESNET_ENCODERS+densenet.DENSENET_ENCODERS, default='resnet18', help='Learning Encoder'
-    )
+    parser.add_argument('--config', '-c', type=str, default='./config/default.yaml', help='Config file to run the training')
     
-    # Optimizer Choice
-    parser.add_argument(
-        '--optimizer', type=str, choices=['Adam', 'LARS'], default='Adam', help='Optimizer for the SimCLR Model'
-    )
+    parser.add_argument('--checkpoint', type=object, default=None, help='Add your checkpoint here if you want to resume a previous training.')
     
-    # Batch Size
-    parser.add_argument(
-        '--batch_size', type=int, default=128
-    )
+    # Parse arguments known up till here, the rest via config file
+    args = parser.parse_known_args()[0]
+    print(args.config)
     
-    # Image Settings
-    parser.add_argument(
-        '--image_augments', type=int, default=2, help='The amount of augmentations created and used for the training'
-    )
-    
-    parser.add_argument(
-        '--image_resize', type=int, default=224, help='Image width and height for the Resize augmentation'
-    )
-    
-    parser.add_argument(
-        '--epochs', type=int, default=100
-    )
-    
-    parser.add_argument(
-        '--start_epoch', type=int, default=0
-    )
-    
-    # Projection Dimension for the linear MLP head used to project the embeddings
-    parser.add_argument(
-        '--projection_dim', type=int, default=128, help='Projection Dimension when calculating the logits'
-    )
-    
-    parser.add_argument(
-        '--dataset_name', type=str, choices=['CIFAR10', 'STL10', 'Imagenette', 'tiny-imagenet'], default='CIFAR10', help='Datasat to train on'
-    )
-    
-    # Resume
-    parser.add_argument(
-        '--resume', action='store_false', help='Resume a already started training. Checkpoint must be given'
-    )
-    
-    parser.add_argument(
-        '--checkpoint', type=str, help='Path to a checkpoint'
-    )
-    
-    # Seed
-    parser.add_argument(
-        '--seed', type=int, default=42
-    )
-    
-    # Activate Train state
-    parser.add_argument(
-        '--train', action='store_true'
-    )
-    
-    parser.add_argument(
-        '--HF_TOKEN', type=str, default=None,
-    )
-    
+    with open(args.config, 'r') as file:
+        config = yaml.safe_load(file)
+        for elem in config:
+            k, v = elem.popitem()
+            parser.add_argument(f"--{k}", default=v, type=type(v))    
+
     args = parser.parse_args()
     main(args)
