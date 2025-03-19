@@ -9,8 +9,8 @@ METRICS_HEADER = ['Epoch', 'Loss', 'Elapsed Time']
 class CSV_Metric:
     def __init__(self, args: argparse.Namespace):
         self.filename = f"{datetime.now().strftime('%Y%m%d-%H%M%S')}_{args.encoder}.csv"
-        self.beginnig = None
-        self.end = None    
+        self.t1 = None
+        self.t2 = None    
         self.args = args
         self._make_file()
         
@@ -28,15 +28,15 @@ class CSV_Metric:
                 writer.writerow(METRICS_HEADER)
                 
     def start(self):
-        self.beginnig = datetime.now()
+        self.t1 = datetime.now()
         return
         
     def end(self):
-        self.end = datetime.now()
+        self.t2 = datetime.now()
         return
         
     def write(self, epoch: int, loss: float):
         with open(f"{BASE_FOLDER}/{self.args.dataset_name}/{self.filename}", "w", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow([epoch+1, loss, (self.end-self.beginnig).seconds])
+            writer.writerow([epoch+1, loss, (self.t2-self.t1).seconds])
         return
