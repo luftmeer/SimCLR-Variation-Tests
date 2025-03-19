@@ -18,8 +18,17 @@ def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: o
     # Create sub folder for dataset name in checkpoint folder, if it doesn't exist yet
     if not os.path.exists(f"{CHECKPOINTS_FOLDER}/{dataset_name}/"):
         os.makedirs(f"{CHECKPOINTS_FOLDER}/{dataset_name}/")
-    # datetime_dataset-name_epoch_image-size_augmentations_dataset-size_dataset-distribution.ext 
-    filename = f"{datetime.now().strftime('%Y%m%d-%H%M%S')}_{encoder}_{dataset_name}_{epoch}"
+    
+    filename_content = [args.encoder, 
+                        args.optimizer, 
+                        args.batch_size, 
+                        args.augmentations, 
+                        args.projection_dim, 
+                        args.temperature,
+                        epoch+1
+                    ]
+    
+    filename = f"{CHECKPOINTS_FOLDER}/{dataset_name}/{datetime.now().strftime('%Y%m%d%H%M%S')}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
     
     torch.save(
             {
