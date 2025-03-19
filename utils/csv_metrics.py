@@ -36,7 +36,7 @@ class CSV_Metric:
         return
         
     def write(self, epoch: int, loss: float):
-        with open(f"{BASE_FOLDER}/{self.args.dataset_name}/{self.filename}", "w", newline="") as file:
+        with open(f"{BASE_FOLDER}/{self.args.dataset_name}/{self.filename}", "a", newline="") as file:
             writer = csv.writer(file)
             writer.writerow([epoch+1, loss, (self.t2-self.t1).seconds])
         return
