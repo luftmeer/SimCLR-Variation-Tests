@@ -87,7 +87,6 @@ if __name__ == '__main__':
     
     # Parse arguments known up till here, the rest via config file
     args = parser.parse_known_args()[0]
-    print(args.config)
     
     with open(args.config, 'r') as file:
         config = yaml.safe_load(file)
