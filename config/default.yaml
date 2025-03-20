@@ -24,3 +24,10 @@
 # Hugging Face
 # IMPORTANT: Don't store your Hugging Face Token in any file and upload it. Rather use env variable HF_TOKEN
 - HF_TOKEN: NULL
+
+# Distributed Computation Settings
+- nodes: 1
+- gpus: 1
+- number: 0
+- rank: 0
+- dataset_workers: 8
