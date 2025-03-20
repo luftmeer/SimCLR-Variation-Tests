@@ -38,9 +38,7 @@ def main(args):
     
     train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN)
 
-    train_sampler = torch.utils.data.distributed.DistributedSampler(
-        train_dataset, num_replicas=args.world_size, rank=local_rank, shuffle=True
-    )
+    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
 
     train_loader = torch.utils.data.DataLoader(
             train_dataset,
@@ -62,6 +60,8 @@ def main(args):
     loss_fn = NTXentLoss(batch_size=args.batch_size).to(local_rank)
 
     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+    print(f"{model.eval()=}")
+    print(f"{model.encoder.eval()=}")
     model = DDP(model, device_ids=[local_rank])
     model.to(local_rank)
     
