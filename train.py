@@ -32,7 +32,9 @@ def ddp_setup(rank: int, world_size: int):
    init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
 def main(gpu, args):
-    rank = args.number * args.gpus + gpu
+    #rank = args.number * args.gpus + gpu
+    rank = int(os.environ["LOCAL_RANK"])
+    global_rank = int(os.environ["RANK"])
     
     if args.nodes > 1:
         ddp_setup(rank=rank, world_size=args.world_size)
@@ -64,17 +66,17 @@ def main(gpu, args):
     if args.resume:
         start_epoch = args.start_epoch
     else:
-        model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=args.device).to(args.device)
+        model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=rank).to(rank)
         start_epoch = 0
         # Init CSV File Metric
         if args.number == 0:
             csv_metric = csv_metrics.CSV_Metric(args)
     
-    loss_fn = NTXentLoss(batch_size=args.batch_size).to(args.device)
+    loss_fn = NTXentLoss(batch_size=args.batch_size).to(rank)
     
     if args.nodes > 1:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-        model = DDP(model, device_ids=[gpu])
+        model = DDP(model, device_ids=[rank])
     
     if args.optimizer == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
@@ -106,7 +108,7 @@ def main(gpu, args):
         if args.number == 0:        
             csv_metric.end()
         
-        print(f'Epoch {epoch+1} | Loss: {loss_epoch}')
+        print(f'Epoch {epoch+1} | Global Rank {global_rank} | Loss: {loss_epoch}')
         
         if args.number == 0:
             csv_metric.write(epoch=epoch, loss=loss_epoch)
