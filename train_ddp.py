@@ -20,44 +20,34 @@ from torch.distributed import init_process_group, destroy_process_group
 import os
 
 
-def ddp_setup(rank: int, world_size: int):
-   """
-   Args:
-       rank: Unique identifier of each process
-      world_size: Total number of processes
-   """
-   os.environ["MASTER_ADDR"] = "localhost"
-   os.environ["MASTER_PORT"] = "12355"
-   torch.cuda.set_device(rank)
-   init_process_group(backend="nccl", rank=rank, world_size=world_size)
+def ddp_setup():
+   torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
+   init_process_group(backend="nccl")
 
-def main(gpu, args):
-    #rank = args.number * args.gpus + gpu
-    rank = int(os.environ["LOCAL_RANK"])
-    global_rank = int(os.environ["RANK"])
+def main(args):
+    ddp_setup()
     
-    if args.nodes > 1:
-        ddp_setup(rank=rank, world_size=args.world_size)
-        
+    local_rank = int(os.environ["LOCAL_RANK"])
+    global_rank = int(os.environ["RANK"])
+
     # Randomness
     torch.manual_seed(args.seed)
-    csv_metric = csv_metrics.CSV_Metric(args)
+    if global_rank == 0:
+        csv_metric = csv_metrics.CSV_Metric(args)
     
     
     train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN)
 
-    if args.nodes > 1:
-            train_sampler = torch.utils.data.distributed.DistributedSampler(
-                train_dataset, num_replicas=args.world_size, rank=rank, shuffle=True
-            )
-    else:
-        train_sampler = None
+    train_sampler = torch.utils.data.distributed.DistributedSampler(
+        train_dataset, num_replicas=args.world_size, rank=local_rank, shuffle=True
+    )
 
     train_loader = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=args.batch_size,
-            shuffle=(train_sampler is None),
+            shuffle=False,
             drop_last=True,
+            pin_memory=True,
             sampler=train_sampler,
         )
 
@@ -66,17 +56,14 @@ def main(gpu, args):
     if args.resume:
         start_epoch = args.start_epoch
     else:
-        model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=rank).to(rank)
+        model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=local_rank).to(local_rank)
         start_epoch = 0
-        # Init CSV File Metric
-        if args.number == 0:
-            csv_metric = csv_metrics.CSV_Metric(args)
     
-    loss_fn = NTXentLoss(batch_size=args.batch_size).to(rank)
-    
-    if args.nodes > 1:
-        model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-        model = DDP(model, device_ids=[rank])
+    loss_fn = NTXentLoss(batch_size=args.batch_size).to(local_rank)
+
+    model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+    model = DDP(model, device_ids=[local_rank])
+    model.to(local_rank)
     
     if args.optimizer == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
@@ -93,7 +80,7 @@ def main(gpu, args):
         for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
             optimizer.zero_grad()
             
-            hs, zs = model(augmentations)
+            _, zs = model(augmentations)
             
             loss = loss_fn(zs)
             loss.backward()
@@ -142,13 +129,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    args.world_size = torch.cuda.device_count()
-    
-    if args.nodes > 1:
-        print(
-            f"Training with {args.nodes} nodes, waiting until all nodes join before starting training"
-        )
-        mp.spawn(main, args=(args,), nprocs=args.gpus, join=True)
-    else:
-        main(0, args)
+    main(args)
