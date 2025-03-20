@@ -1,6 +1,5 @@
 import argparse
 
-import torchvision
 from simclr.simclr import SimCLR
 from simclr.transform import SimCLRTransform
 from simclr.loss import NTXentLoss
