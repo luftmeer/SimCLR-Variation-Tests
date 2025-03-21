@@ -25,6 +25,24 @@ def ddp_setup():
    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
    init_process_group(backend="nccl")
 
+def train(model, optimizer, loss_fn, train_loader, local_rank):
+    for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
+        optimizer.zero_grad()
+        
+        _, zs = model(augmentations)
+        zs = zs.to(local_rank)
+        
+        loss = loss_fn(zs)
+        loss.backward()
+        optimizer.step()
+        
+        loss_epoch += loss.item()
+        
+        if i % 50 == 0:
+            print(f"Step [{i}/{len(train_loader)}]\t Loss: {loss.item()}")
+
+
+
 @record
 def main(args):
     ddp_setup()
@@ -34,7 +52,7 @@ def main(args):
 
     # Randomness
     torch.manual_seed(args.seed)
-    if global_rank == 0:
+    if local_rank == 0 and global_rank == 0:
         csv_metric = csv_metrics.CSV_Metric(args)
     
     
@@ -70,42 +88,29 @@ def main(args):
 
     model.train()
     for epoch in range(start_epoch, args.epochs):
-        if args.number == 0:
+        if local_rank == 0:
             csv_metric.start()
         loss_epoch = 0
         
         if train_sampler is not None:
             train_sampler.set_epoch(epoch)
-            
-        for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
-            optimizer.zero_grad()
-            
-            _, zs = model(augmentations)
-            
-            loss = loss_fn(zs)
-            loss.backward()
-            optimizer.step()
-            
-            loss_epoch += loss.item()
-            
-            if i % 50 == 0:
-                print(f"Step [{i}/{len(train_loader)}]\t Loss: {loss.item()}")
         
+        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank)
         
-        if args.number == 0:        
+        if local_rank == 0 and global_rank == 0:        
             csv_metric.end()
         
         print(f'Epoch {epoch+1} | Global Rank {global_rank} | Loss: {loss_epoch}')
         
-        if args.number == 0:
+        if local_rank == 0 and global_rank == 0:
             csv_metric.write(epoch=epoch, loss=loss_epoch)
             
-        if (epoch+1) % args.save_every_epoch == 0:
+        if (epoch+1) % args.save_every_epoch == 0 and global_rank == 0:
             print(f"Saving model at Epoch {epoch+1}")
-            loader.save_model(model=model, optimizer=optimizer, loss=loss, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args, csv_metric=csv_metric)
+            loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args, csv_metric=csv_metric)
     
     print(f"Saving final model at Epoch {epoch+1}")
-    loader.save_model(model=model, optimizer=optimizer, loss=loss, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args, csv_metric=csv_metric)
+    loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args, csv_metric=csv_metric)
     destroy_process_group()
     
 if __name__ == '__main__':
