@@ -61,7 +61,7 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
         'global_rank': int(os.environ["RANK"]),
         'world_size': world_size,
         'loss': float(loss),
-        'host': socket.gethostbyname(),
+        'host': socket.gethostname(),
         'elapsed_time': elapsed_time,
     }
 
