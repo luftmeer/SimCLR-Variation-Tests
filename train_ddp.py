@@ -36,9 +36,15 @@ def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
     Returns:
         torch.Tensor: Projections of the current GPU plus the projections of the other GPUS attached
     """
-    tensors = [torch.zeros_like(tensor) for _ in range(dist.get_world_size())]
-    dist.all_gather(tensors, tensor)
-    return torch.cat(tensors, dim=0)
+    world_size = dist.get_world_size()
+    gathered = [torch.zeros_like(tensor) for _ in range(world_size)]
+    dist.all_gather(gathered, tensor)
+    
+    # Replace current rank’s tensor in gathered list with the original one
+    # so that autograd can track it
+    gathered[dist.get_rank()] = tensor
+
+    return torch.cat(gathered, dim=0)
 
 
 def train(model, optimizer, loss_fn, train_loader, local_rank):
