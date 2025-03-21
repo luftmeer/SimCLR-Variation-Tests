@@ -17,6 +17,7 @@ import torch.multiprocessing as mp
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
+import torch.distributed as dist
 import os
 from torch.distributed.elastic.multiprocessing.errors import record
 
@@ -25,14 +26,32 @@ def ddp_setup():
    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
    init_process_group(backend="nccl")
 
+@torch.no_grad()
+def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
+    """Gather all projections from the other nodes and GPUs.
+
+    Args:
+        tensor (torch.Tensor): Projection of the current GPU
+
+    Returns:
+        torch.Tensor: Projections of the current GPU plus the projections of the other GPUS attached
+    """
+    tensors = [torch.zeros_like(tensor) for _ in range(dist.get_world_size())]
+    dist.all_gather(tensors, tensor)
+    return torch.cat(tensors, dim=0)
+
+
 def train(model, optimizer, loss_fn, train_loader, local_rank):
     total_loss = 0
     for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
         optimizer.zero_grad()
         
         _, zs = model(augmentations)
+        zs_all = []
+        for z in zs:
+            zs_all.append(gather_projections(z))
         
-        loss = loss_fn(zs)
+        loss = loss_fn(zs_all)
         loss.backward()
         optimizer.step()
         
@@ -78,7 +97,7 @@ def main(args):
         model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=local_rank).to(local_rank)
         start_epoch = 0
     
-    loss_fn = NTXentLoss(batch_size=args.batch_size, device=local_rank).to(local_rank)
+    loss_fn = NTXentLoss(batch_size=args.batch_size*dist.get_world_size(), device=local_rank).to(local_rank)
 
     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
     model = DDP(model, device_ids=[local_rank])

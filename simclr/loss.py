@@ -33,8 +33,6 @@ class NTXentLoss(nn.Module):
             for j in range(i+1, len(Zs)):
                 z_i = Zs[i]
                 z_j = Zs[j]
-                z_i = z_i.to(self.device)
-                z_j = z_j.to(self.device)
                 
                 z = torch.cat((z_i, z_j), dim=0)
 
@@ -53,20 +51,3 @@ class NTXentLoss(nn.Module):
                 total_loss += loss
         return total_loss
         
-        """N = len(Zs) * self.batch_size
-        
-        logits = torch.empty(size=(self.batch_size,))
-        for query in range(self.batch_size):
-            pos_pair = torch.exp(self.similarity_fn(Zs[0][query], Zs[1][query]) / self.temperature)
-            neg_pair_sum = torch.empty_like((pos_pair))
-            for k in range(self.batch_size):
-                if query != k:
-                    neg_pair_sum += torch.exp(self.similarity_fn(Zs[0][query], Zs[1][k]) / self.temperature)
-                    
-            logits[query] = -torch.log(pos_pair / neg_pair_sum)
-            
-        labels = torch.arange(self.batch_size, dtype=torch.float)
-        
-        loss = self.criterion(logits, labels)
-        loss /= N
-        return loss"""
