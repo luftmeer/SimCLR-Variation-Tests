@@ -8,8 +8,12 @@ from models.encoder import get_encoder
 from models import resnet, densenet
 import tqdm
 from utils.dataset_loader import get_dataset
-from utils import loader, csv_metrics
+from utils import loader
 import yaml
+from filelock import FileLock
+import socket
+import csv
+import time
 
 # DDP
 import torch.nn.functional as F
@@ -45,6 +49,34 @@ def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
 
     return torch.cat(gathered, dim=0)
 
+def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: float):
+    log_file = f"{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epoch, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
+    
+    rank = dist.get_rank()
+    world_size = dist.get_world_size()
+    
+    row = {
+        'epoch': epoch+1,
+        'rank': rank,
+        'global_rank': int(os.environ["RANK"]),
+        'world_size': world_size,
+        'loss': float(loss),
+        'host': socket.gethostbyname(),
+        'elapsed_time': elapsed_time,
+    }
+
+    # Shared file path (can be an absolute path if needed)
+    log_path = os.path.join(os.getcwd(), 'metrics', args.dataset_name, log_file)
+    lock_path = log_path + ".lock"
+
+    # Use FileLock to prevent simultaneous write
+    with FileLock(lock_path):
+        file_exists = os.path.isfile(log_path)
+        with open(log_path, 'a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=row.keys())
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(row)
 
 def train(model, optimizer, loss_fn, train_loader, local_rank):
     total_loss = 0
@@ -77,8 +109,6 @@ def main(args):
 
     # Randomness
     torch.manual_seed(args.seed)
-    if local_rank == 0 and global_rank == 0:
-        csv_metric = csv_metrics.CSV_Metric(args)
     
     
     train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN)
@@ -112,29 +142,27 @@ def main(args):
         optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
 
     model.train()
-    for epoch in range(start_epoch, args.epochs):
-        if local_rank == 0 and global_rank == 0:
-            csv_metric.start()
-        
+    for epoch in range(start_epoch, args.epochs):        
         if train_sampler is not None:
             train_sampler.set_epoch(epoch)
         
+        start = time.time()
+        
         loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank)
         
-        if local_rank == 0 and global_rank == 0:        
-            csv_metric.end()
+        end = time.time()
         
-        print(f'Epoch {epoch+1} | Global Rank {global_rank} | Loss: {loss_epoch}')
+        print(f'Epoch {epoch+1} | Global Rank {global_rank} | Local Rank {local_rank} | Loss: {loss_epoch}')
         
-        if local_rank == 0 and global_rank == 0:
-            csv_metric.write(epoch=epoch, loss=loss_epoch)
+        if args.metrics:
+            log_loss(epoch=epoch, loss=loss_epoch, args=args, elapsed_time=end-start)
             
         if (epoch+1) % args.save_every_epoch == 0 and global_rank == 0:
             print(f"Saving model at Epoch {epoch+1}")
-            loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args, csv_metric=csv_metric)
+            loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args)
     
     print(f"Saving final model at Epoch {epoch+1}")
-    loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args, csv_metric=csv_metric)
+    loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args)
     destroy_process_group()
     
 if __name__ == '__main__':

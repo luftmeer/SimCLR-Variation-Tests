@@ -26,8 +26,7 @@
 - HF_TOKEN: NULL
 
 # Distributed Computation Settings
-- nodes: 1
-- gpus: 1
-- number: 0
-- rank: 0
 - dataset_workers: 8
+
+# Metrics
+- metrics: True
