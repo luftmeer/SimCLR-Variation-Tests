@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class NTXentLoss(nn.Module):
-    def __init__(self,  batch_size: int, temperature: float=0.5):
+    def __init__(self,  batch_size: int, device, temperature: float=0.5):
         super(NTXentLoss, self).__init__()
         
         self.criterion = nn.CrossEntropyLoss(reduction='sum')
@@ -10,6 +10,7 @@ class NTXentLoss(nn.Module):
         self.batch_size = batch_size
         self.temperature = temperature
         self.mask = self.mask_correlated_samples(batch_size)
+        self.device = device
         
     def mask_correlated_samples(self, batch_size: int):
         N = 2 * batch_size
@@ -32,6 +33,8 @@ class NTXentLoss(nn.Module):
             for j in range(i+1, len(Zs)):
                 z_i = Zs[i]
                 z_j = Zs[j]
+                z_i = z_i.to(self.device)
+                z_j = z_j.to(self.device)
                 
                 z = torch.cat((z_i, z_j), dim=0)
 

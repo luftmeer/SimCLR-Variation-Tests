@@ -30,7 +30,6 @@ def train(model, optimizer, loss_fn, train_loader, local_rank):
         optimizer.zero_grad()
         
         _, zs = model(augmentations)
-        zs = zs.to(local_rank)
         
         loss = loss_fn(zs)
         loss.backward()
@@ -77,7 +76,7 @@ def main(args):
         model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=local_rank).to(local_rank)
         start_epoch = 0
     
-    loss_fn = NTXentLoss(batch_size=args.batch_size).to(local_rank)
+    loss_fn = NTXentLoss(batch_size=args.batch_size, device=local_rank).to(local_rank)
 
     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
     model = DDP(model, device_ids=[local_rank])
@@ -88,7 +87,7 @@ def main(args):
 
     model.train()
     for epoch in range(start_epoch, args.epochs):
-        if local_rank == 0:
+        if local_rank == 0 and global_rank == 0:
             csv_metric.start()
         loss_epoch = 0
         
