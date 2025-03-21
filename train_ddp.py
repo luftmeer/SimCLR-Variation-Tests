@@ -50,7 +50,7 @@ def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
     return torch.cat(gathered, dim=0)
 
 def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: float):
-    log_file = f"{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epoch, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
+    log_file = f"{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
     
     rank = dist.get_rank()
     world_size = dist.get_world_size()
