@@ -26,7 +26,6 @@ def ddp_setup():
    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
    init_process_group(backend="nccl")
 
-@torch.no_grad()
 def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
     """Gather all projections from the other nodes and GPUs.
 
