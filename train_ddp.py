@@ -18,12 +18,14 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 import os
+from torch.distributed.elastic.multiprocessing.errors import record
 
 
 def ddp_setup():
    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
    init_process_group(backend="nccl")
 
+@record
 def main(args):
     ddp_setup()
     
@@ -60,8 +62,6 @@ def main(args):
     loss_fn = NTXentLoss(batch_size=args.batch_size).to(local_rank)
 
     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-    print(f"{model.eval()=}")
-    print(f"{model.encoder.eval()=}")
     model = DDP(model, device_ids=[local_rank])
     model.to(local_rank)
     
