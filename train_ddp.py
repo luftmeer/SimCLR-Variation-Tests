@@ -26,6 +26,7 @@ def ddp_setup():
    init_process_group(backend="nccl")
 
 def train(model, optimizer, loss_fn, train_loader, local_rank):
+    total_loss = 0
     for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
         optimizer.zero_grad()
         
@@ -35,11 +36,12 @@ def train(model, optimizer, loss_fn, train_loader, local_rank):
         loss.backward()
         optimizer.step()
         
-        loss_epoch += loss.item()
+        total_loss += loss.item()
         
         if i % 50 == 0:
             print(f"Step [{i}/{len(train_loader)}]\t Loss: {loss.item()}")
 
+    return total_loss
 
 
 @record
@@ -89,7 +91,6 @@ def main(args):
     for epoch in range(start_epoch, args.epochs):
         if local_rank == 0 and global_rank == 0:
             csv_metric.start()
-        loss_epoch = 0
         
         if train_sampler is not None:
             train_sampler.set_epoch(epoch)
