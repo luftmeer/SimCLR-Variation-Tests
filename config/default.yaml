@@ -30,3 +30,7 @@
 
 # Metrics
 - metrics: True
+
+# Gradient accumulation
+- ga: False
+- ga_count: 8
