@@ -85,7 +85,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args):
         optimizer.zero_grad()
         
         
-        with autocast():
+        with autocast(device_type='cuda'):
             _, zs = model(augmentations)
        
             zs_all = []
@@ -149,8 +149,6 @@ def main(args):
     else:
         model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=local_rank).to(local_rank)
         start_epoch = 0
-        if args.half_precision:
-            model.half()
     
     loss_fn = NTXentLoss(batch_size=args.batch_size*dist.get_world_size(), device=local_rank).to(local_rank)
 
