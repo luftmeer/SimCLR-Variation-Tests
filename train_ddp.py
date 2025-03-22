@@ -14,6 +14,7 @@ from filelock import FileLock
 import socket
 import csv
 import time
+from torch.amp import autocast, GradScaler
 
 # DDP
 import torch.nn.functional as F
@@ -78,25 +79,35 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
                 writer.writeheader()
             writer.writerow(row)
 
-def train(model, optimizer, loss_fn, train_loader, local_rank, args):
+def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args):
     total_loss = 0
     for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
         optimizer.zero_grad()
         
-        _, zs = model(augmentations)
-        zs_all = []
-        for z in zs:
-            zs_all.append(gather_projections(z))
         
-        loss = loss_fn(zs_all)
-        loss.backward()
+        with autocast():
+            _, zs = model(augmentations)
+       
+            zs_all = []
+            for z in zs:
+                zs_all.append(gather_projections(z))
+            
+            loss = loss_fn(zs_all)
+        if torch.is_autocast_enabled():
+            scaler.scale(loss).backward()
+            if args.ga and i % args.ga_count == 0 or not args.ga or i+1 == len(train_loader):
+                scaler.step(optimizer)
+            scaler.update()
+        else:
+            
+            loss.backward()
         
         # Gradient Accumulation
         # First Case: Gradient Accumulation is active and the n-th batch is rached which is divisible by ga_count
         # Second Case: Gradient Accumulation is not available -> always do the step
         # Third Case: The current batch is the last one -> always optimize
-        if args.ga and i % args.ga_count == 0 or not args.ga or i+1 == len(train_loader):
-            optimizer.step()
+            if args.ga and i % args.ga_count == 0 or not args.ga or i+1 == len(train_loader):
+                optimizer.step()
         
         
         total_loss += loss.item()
@@ -118,7 +129,7 @@ def main(args):
     torch.manual_seed(args.seed)
     
     
-    train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN)
+    train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN, args=args)
 
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
 
@@ -138,6 +149,8 @@ def main(args):
     else:
         model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=local_rank).to(local_rank)
         start_epoch = 0
+        if args.half_precision:
+            model.half()
     
     loss_fn = NTXentLoss(batch_size=args.batch_size*dist.get_world_size(), device=local_rank).to(local_rank)
 
@@ -147,6 +160,9 @@ def main(args):
     
     if args.optimizer == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+        
+    if args.half_precision:
+        scaler = GradScaler()
 
     model.train()
     for epoch in range(start_epoch, args.epochs):        
@@ -155,7 +171,7 @@ def main(args):
         
         start = time.time()
         
-        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank, args)
+        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args)
         
         end = time.time()
         
