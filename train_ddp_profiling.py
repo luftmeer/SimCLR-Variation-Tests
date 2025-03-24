@@ -52,7 +52,7 @@ def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
     return torch.cat(gathered, dim=0)
 
 def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: float):
-    log_file = f"{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
+    log_file = f"{args.slurm_job_id}-{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
     
     rank = dist.get_rank()
     world_size = dist.get_world_size()
@@ -86,10 +86,10 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, epoch, ar
         schedule=torch.profiler.schedule(
             wait=1, warmup=1, active=3, repeat=1
         ),
-        on_trace_ready=torch.profiler.tensorboard_trace_handler(f'./logs/epoch{epoch}'),
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(f'./logs/{args.slurm_job_id}/epoch{epoch}'),
         record_shapes=True,
         profile_memory=True,
-        with_stack=True,
+        with_stack=False,
         with_flops=True
     ) as prof:
     

@@ -35,3 +35,6 @@
 # Gradient accumulation
 - ga: False
 - ga_count: 8
+
+# Slurm
+- slurm_job_id: NULL

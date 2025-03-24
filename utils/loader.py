@@ -27,7 +27,7 @@ def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: o
                         epoch+1
                     ]
     
-    filename = f"{CHECKPOINTS_FOLDER}/{dataset_name}/{datetime.now().strftime('%Y%m%d%H%M%S')}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
+    filename = f"{CHECKPOINTS_FOLDER}/{dataset_name}/{datetime.now().strftime('%Y%m%d%H%M%S')}-{args.slurm_job_id}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
     
     torch.save(
             {
