@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class NTXentLoss(nn.Module):
-    def __init__(self,  batch_size: int, temperature: float=0.5):
+    def __init__(self,  batch_size: int, device, temperature: float=0.5):
         super(NTXentLoss, self).__init__()
         
         self.criterion = nn.CrossEntropyLoss(reduction='sum')
@@ -10,6 +10,7 @@ class NTXentLoss(nn.Module):
         self.batch_size = batch_size
         self.temperature = temperature
         self.mask = self.mask_correlated_samples(batch_size)
+        self.device = device
         
     def mask_correlated_samples(self, batch_size: int):
         N = 2 * batch_size
@@ -50,20 +51,3 @@ class NTXentLoss(nn.Module):
                 total_loss += loss
         return total_loss
         
-        """N = len(Zs) * self.batch_size
-        
-        logits = torch.empty(size=(self.batch_size,))
-        for query in range(self.batch_size):
-            pos_pair = torch.exp(self.similarity_fn(Zs[0][query], Zs[1][query]) / self.temperature)
-            neg_pair_sum = torch.empty_like((pos_pair))
-            for k in range(self.batch_size):
-                if query != k:
-                    neg_pair_sum += torch.exp(self.similarity_fn(Zs[0][query], Zs[1][k]) / self.temperature)
-                    
-            logits[query] = -torch.log(pos_pair / neg_pair_sum)
-            
-        labels = torch.arange(self.batch_size, dtype=torch.float)
-        
-        loss = self.criterion(logits, labels)
-        loss /= N
-        return loss"""

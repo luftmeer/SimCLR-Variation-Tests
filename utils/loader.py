@@ -2,7 +2,6 @@ import torch
 import os
 from datetime import datetime
 import argparse
-from .csv_metrics import CSV_Metric
 
 # Base Folder for Checkpoints
 CHECKPOINTS_FOLDER = './checkpoints'
@@ -11,7 +10,7 @@ def load_model(path:str) -> torch.nn:
     pass
 
 
-def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: object, dataset_name: str, epoch: int, encoder: str, args:argparse.Namespace, csv_metric: CSV_Metric) -> None:
+def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: object, dataset_name: str, epoch: int, encoder: str, args:argparse.Namespace) -> None:
     if not os.path.exists(CHECKPOINTS_FOLDER):
         os.makedirs(CHECKPOINTS_FOLDER)
 
@@ -28,7 +27,7 @@ def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: o
                         epoch+1
                     ]
     
-    filename = f"{CHECKPOINTS_FOLDER}/{dataset_name}/{datetime.now().strftime('%Y%m%d%H%M%S')}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
+    filename = f"{CHECKPOINTS_FOLDER}/{dataset_name}/{datetime.now().strftime('%Y%m%d%H%M%S')}-{args.slurm_job_id}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
     
     torch.save(
             {
@@ -39,7 +38,6 @@ def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: o
                 #"loss": loss.state_dict(),
                 "args": args,
                 "dataset_name": dataset_name,
-                "csv_metric": csv_metric,
             },
             filename,
         )

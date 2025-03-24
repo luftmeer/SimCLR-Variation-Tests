@@ -15,14 +15,52 @@ import socket
 import csv
 import time
 from torch.amp import autocast, GradScaler
-import os
 
+# DDP
+import torch.nn.functional as F
+import torch.multiprocessing as mp
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.distributed import init_process_group, destroy_process_group
+import torch.distributed as dist
+import os
+from torch.distributed.elastic.multiprocessing.errors import record
+
+
+def ddp_setup():
+   torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
+   init_process_group(backend="nccl")
+
+def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
+    """Gather all projections from the other nodes and GPUs.
+
+    Args:
+        tensor (torch.Tensor): Projection of the current GPU
+
+    Returns:
+        torch.Tensor: Projections of the current GPU plus the projections of the other GPUS attached
+    """
+    world_size = dist.get_world_size()
+    gathered = [torch.zeros_like(tensor) for _ in range(world_size)]
+    dist.all_gather(gathered, tensor)
+    
+    # Replace current rank’s tensor in gathered list with the original one
+    # so that autograd can track it
+    gathered[dist.get_rank()] = tensor
+
+    return torch.cat(gathered, dim=0)
 
 def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: float):
     log_file = f"{args.slurm_job_id}-{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
-        
+    
+    rank = dist.get_rank()
+    world_size = dist.get_world_size()
+    
     row = {
         'epoch': epoch+1,
+        'rank': rank,
+        'global_rank': int(os.environ["RANK"]),
+        'world_size': world_size,
         'loss': float(loss),
         'host': socket.gethostname(),
         'elapsed_time': elapsed_time,
@@ -41,7 +79,7 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
                 writer.writeheader()
             writer.writerow(row)
 
-def train(model, optimizer, loss_fn, train_loader, scaler, args):
+def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args):
     total_loss = 0
     for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
         optimizer.zero_grad()
@@ -49,8 +87,12 @@ def train(model, optimizer, loss_fn, train_loader, scaler, args):
         
         with autocast(device_type='cuda'):
             _, zs = model(augmentations)
+       
+            zs_all = []
+            for z in zs:
+                zs_all.append(gather_projections(z))
             
-            loss = loss_fn(zs)
+            loss = loss_fn(zs_all)
         if torch.is_autocast_enabled():
             scaler.scale(loss).backward()
             if args.ga and i % args.ga_count == 0 or not args.ga or i+1 == len(train_loader):
@@ -75,19 +117,29 @@ def train(model, optimizer, loss_fn, train_loader, scaler, args):
 
     return total_loss
 
+
+@record
 def main(args):
+    ddp_setup()
+    
+    local_rank = int(os.environ["LOCAL_RANK"])
+    global_rank = int(os.environ["RANK"])
+
     # Randomness
     torch.manual_seed(args.seed)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+    
+    
     train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN, args=args)
+
+    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
 
     train_loader = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=args.batch_size,
-            shuffle=True,
+            shuffle=False,
             drop_last=True,
             pin_memory=True,
+            sampler=train_sampler,
         )
 
     encoder, n_features = get_encoder(args.encoder)
@@ -95,42 +147,44 @@ def main(args):
     if args.resume:
         start_epoch = args.start_epoch
     else:
-        model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=device).to(device)
+        model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=local_rank).to(local_rank)
         start_epoch = 0
     
-    loss_fn = NTXentLoss(batch_size=args.batch_size, device=device).to(device)
+    loss_fn = NTXentLoss(batch_size=args.batch_size*dist.get_world_size(), device=local_rank).to(local_rank)
 
-    model.to(device)
+    model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
+    model = DDP(model, device_ids=[local_rank])
+    model.to(local_rank)
     
     if args.optimizer == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
         
     if args.half_precision:
         scaler = GradScaler()
-    else:
-        scaler = None
 
     model.train()
-    for epoch in range(start_epoch, args.epochs):
+    for epoch in range(start_epoch, args.epochs):        
+        if train_sampler is not None:
+            train_sampler.set_epoch(epoch)
         
         start = time.time()
         
-        loss_epoch = train(model, optimizer, loss_fn, train_loader, scaler, args)
+        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args)
         
         end = time.time()
         
-        print(f'Epoch {epoch+1} | Loss: {loss_epoch}')
+        print(f'Epoch {epoch+1} | Global Rank {global_rank} | Local Rank {local_rank} | Loss: {loss_epoch}')
         
         if args.metrics:
             log_loss(epoch=epoch, loss=loss_epoch, args=args, elapsed_time=end-start)
             
-        if (epoch+1) % args.save_every_epoch == 0:
+        if (epoch+1) % args.save_every_epoch == 0 and global_rank == 0:
             print(f"Saving model at Epoch {epoch+1}")
             loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args)
     
     print(f"Saving final model at Epoch {epoch+1}")
     loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args)
-
+    destroy_process_group()
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

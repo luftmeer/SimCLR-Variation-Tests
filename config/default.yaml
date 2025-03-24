@@ -5,6 +5,7 @@
 - epochs: 1000
 - start_epoch: 0
 - batch_size: 128
+- half_precision: True
 
 # Dataset Settings
 - dataset_name: 'CIFAR10'
@@ -24,3 +25,13 @@
 # Hugging Face
 # IMPORTANT: Don't store your Hugging Face Token in any file and upload it. Rather use env variable HF_TOKEN
 - HF_TOKEN: NULL
+
+# Distributed Computation Settings
+- dataset_workers: 8
+
+# Metrics
+- metrics: True
+
+# Gradient accumulation
+- ga: False
+- ga_count: 8
