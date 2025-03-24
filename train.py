@@ -90,7 +90,7 @@ def main(args):
             pin_memory=True,
         )
 
-    encoder, n_features = get_encoder(args.encoder)
+    encoder, n_features = get_encoder(encoder=args.encoder, widening=args.widening)
 
     if args.resume:
         start_epoch = args.start_epoch
