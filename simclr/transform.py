@@ -27,7 +27,8 @@ class SimCLRTransform:
         # Evaluation Transform. 
         self.eval_transform = transforms.Compose(
             [
-                transforms.RandomResizedCrop(size=self.size)
+                transforms.RandomResizedCrop(size=self.size),
+                transforms.ToTensor()
             ]
         )
     
