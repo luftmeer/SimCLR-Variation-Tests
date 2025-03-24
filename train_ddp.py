@@ -196,6 +196,8 @@ if __name__ == '__main__':
     
     parser.add_argument('--checkpoint', type=object, default=None, help='Add your checkpoint here if you want to resume a previous training.')
     
+    parser.add_argument('--slurm_job_id', type=int, default=None)
+    
     # Parse arguments known up till here, the rest via config file
     args = parser.parse_known_args()[0]
     

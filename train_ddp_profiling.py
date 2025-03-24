@@ -82,7 +82,7 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
 
 def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, epoch, args):
     total_loss = 0
-    with torch.profiler.profiler(
+    with torch.profiler.profile(
         schedule=torch.profiler.schedule(
             wait=1, warmup=1, active=3, repeat=1
         ),
@@ -182,7 +182,7 @@ def main(args):
         
         start = time.time()
         
-        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args)
+        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank, scaler, epoch, args)
         
         end = time.time()
         
