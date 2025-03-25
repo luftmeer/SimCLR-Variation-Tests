@@ -40,3 +40,4 @@
 
 # Linear Evaluation
 - epochs_le: 100
+- save_every_epoch_le: 10

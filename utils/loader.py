@@ -77,7 +77,7 @@ def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: o
     
     return
 
-def save_evaluation(simclr_model: torch.nn.Module, model: torch.nn.Module, args: argparse.Namespace, cpt_epoch: int) -> None:
+def save_evaluation(simclr_model: torch.nn.Module, model: torch.nn.Module, args: argparse.Namespace, cpt_epoch: int, epoch: int) -> None:
     if not os.path.exists(CHECKPOINTS_FOLDER):
         os.makedirs(CHECKPOINTS_FOLDER)
 
@@ -91,7 +91,8 @@ def save_evaluation(simclr_model: torch.nn.Module, model: torch.nn.Module, args:
             os.makedirs(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/{args.slurm_job_id}/")
     
     filename_content = [args.encoder,
-                        cpt_epoch
+                        f'cpt_epoch{cpt_epoch}',
+                        f'epoch{epoch+1}',
                     ]
     
     filename = f"{CHECKPOINTS_FOLDER}/{args.dataset_name}"
@@ -108,6 +109,51 @@ def save_evaluation(simclr_model: torch.nn.Module, model: torch.nn.Module, args:
                 "model_state_dict": model.state_dict(),
                 "args": args,
                 "dataset_name": args.dataset_name,
+            },
+            filename,
+        )
+    
+    return
+
+def save_model_eval(simclr_model: torch.nn.Module, model: torch.nn.Module, args: argparse.Namespace, cpt_epoch: int, epoch: int, optimizer: torch.optim.Optimizer, best_model: bool=False) -> None:
+    if not os.path.exists(CHECKPOINTS_FOLDER):
+        os.makedirs(CHECKPOINTS_FOLDER)
+
+    # Create sub folder for dataset name in checkpoint folder, if it doesn't exist yet
+    if not os.path.exists(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/"):
+        os.makedirs(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/")
+    
+    # Subfolder for Slurm Job
+    if args.slurm_job_id:
+        if not os.path.exists(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/{args.slurm_job_id}/"):
+            os.makedirs(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/{args.slurm_job_id}/")
+    
+    filename_content = [args.encoder,
+                        'Adam',
+                        f'cpt_epoch{cpt_epoch}',
+                        f'epoch{epoch+1}',
+                    ]
+    
+    filename = f"{CHECKPOINTS_FOLDER}/{args.dataset_name}"
+    
+    # Subfolder for Slurm Job
+    if args.slurm_job_id:
+        filename = filename + f"/{args.slurm_job_id}"
+    
+    filename = filename + f"/{args.slurm_job_id}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
+    
+    if best_model:
+        filename = filename + ".best"
+    
+    torch.save(
+            {
+                "epoch": epoch,
+                "simclr_model_state_dict": simclr_model.state_dict(),
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "args": args,
+                "dataset_name": args.dataset_name,
+                "cpt_epoch": cpt_epoch,
             },
             filename,
         )

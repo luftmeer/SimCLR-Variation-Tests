@@ -7,8 +7,10 @@ import torch.nn as nn
 from utils.dataset_loader import get_dataset
 from models.encoder import get_encoder
 from simclr.simclr import SimCLR
-from utils.loader import load_model, save_evaluation
+from utils.loader import load_model, save_evaluation, save_model_eval
 from torcheval.metrics import MulticlassAccuracy
+from utils.log_loss import log_evaluation
+import time
 
 from tqdm import tqdm
 
@@ -31,7 +33,7 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         
         loss.backward()
         optimizer.step()
-    return loss_epoch, accuracy_epoch.compute()
+    return loss_epoch / len(train_loader), accuracy_epoch.compute()
 
 def test(simclr_model, model, criterion, test_loader, device, args):
     loss_epoch = 0
@@ -51,7 +53,7 @@ def test(simclr_model, model, criterion, test_loader, device, args):
         accuracy_epoch.update(out, target)
         loss_epoch += loss.item()
         
-        return loss_epoch, accuracy_epoch.compute()
+    return loss_epoch / len(test_loader), accuracy_epoch.compute()
         
 
 def main(args):
@@ -84,16 +86,37 @@ def main(args):
     criterion = torch.nn.CrossEntropyLoss()
     
     # Train
+    best_accuracy = 0.
     for epoch in range(args.epochs_le):
+        start = time.time()
         loss_epoch, accuracy_epoch = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
-
+        end = time.time()
+        
         print(f"Epoch {epoch+1} | Loss: {loss_epoch} | Accuracy: {accuracy_epoch}")
         
+        # General save after n-epochs
+        if (epoch+1) %args.save_every_epoch_le == 0:
+            save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer)
+        
+        # Current best model save point
+        if accuracy_epoch > best_accuracy:
+            save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, best_model=True)
+            best_accuracy = accuracy_epoch
+        
+        log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=accuracy_epoch, args=args, elapsed_time=end-start)
+        
     # Evaluate
+    start = time.time()
     loss_epoch, accuracy_epoch = test(simclr_model, model, criterion, test_loader, device, args)
-    print(f"[EVAL]\t Loss: {loss_epoch} | Accuracy: {accuracy_epoch}")
+    end = time.time()
+    
+    print(f"[EVAL]\t Loss: {loss_epoch} | Accuracy: {accuracy_epoch}")        
+    log_evaluation(epoch=epoch+1, loss=loss_epoch, accuracy=accuracy_epoch, args=args, elapsed_time=end-start)
+    
     
     # Save Evaluation
+    print("Save final model")
+    save_evaluation(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch+1)
     
     return print("Finished...")
 

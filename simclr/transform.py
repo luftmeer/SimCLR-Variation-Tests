@@ -38,6 +38,6 @@ class SimCLRTransform:
             for _ in range(self.n):
                 augmentations.append(self.transform(img))
         else:
-            augmentations = [self.eval_transform(img)]
+            augmentations = self.eval_transform(img)
         
         return augmentations # returns n transformed images in one list. The DataLoader will split it up and create n batch sets.
