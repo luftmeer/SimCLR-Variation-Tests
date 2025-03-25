@@ -32,9 +32,9 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
 
     # Shared file path (can be an absolute path if needed)
     if args.slurm_job_id:
-        log_path = os.path.join(os.getcwd(), 'metrics', args.slurm_job_id, args.dataset_name,log_file)
+        log_path = os.path.join(os.getcwd(), 'metrics', str(args.slurm_job_id), args.dataset_name, log_file)
     else:
-        log_path = os.path.join(os.getcwd(), 'metrics', args.dataset_name,log_file)
+        log_path = os.path.join(os.getcwd(), 'metrics', args.dataset_name, log_file)
     lock_path = log_path + ".lock"
 
     # Use FileLock to prevent simultaneous write
