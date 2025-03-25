@@ -31,4 +31,4 @@ export LOGLEVEL_INFO
 export NCCL_DEBUG=INFO
 export NCCL_SOCKET_IFNAME=eth0
 
-srun torchrun --nnodes=8 --nproc_per_node=1 --rdzv_id=$RANDOM --rdzv_backend=c10d --rdzv_endpoint=$head_node:29603 train_ddp.py --slurm_job_id=$SLURM_JOB_ID --config=./config/resnet18/Imagenette_2widening_bs128_halfprecision_2augments_4nodes.yaml
+srun torchrun --nnodes=8 --nproc_per_node=1 --rdzv_id=$RANDOM --rdzv_backend=c10d --rdzv_endpoint=$head_node:29603 train_ddp.py --slurm_job_id=$SLURM_JOB_ID --config=./config/resnet18/CIFAR10_2widening_bs64_halfprecision_2augments_4nodes.yaml
