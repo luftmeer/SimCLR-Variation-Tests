@@ -60,6 +60,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args):
             for z in zs:
                 zs_all.append(gather_projections(z))
             
+            zs_all = [z.float() for z in zs_all]
             loss = loss_fn(zs_all)
         if torch.is_autocast_enabled():
             scaler.scale(loss).backward()

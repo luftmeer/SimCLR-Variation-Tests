@@ -19,7 +19,7 @@ class NTXentLoss(nn.Module):
         for i in range(batch_size):
             mask[i, batch_size + i] = 0
             mask[batch_size + i, i] = 0
-        return mask    
+        return mask.to(self.device)
     
     
     def forward(self, Zs):
@@ -34,7 +34,7 @@ class NTXentLoss(nn.Module):
                 z_i = Zs[i]
                 z_j = Zs[j]
                 
-                z = torch.cat((z_i, z_j), dim=0)
+                z = torch.cat((z_i, z_j), dim=0).float()
 
                 sim = self.similarity_fn(z.unsqueeze(1), z.unsqueeze(0)) / self.temperature
                 sim_i_j = torch.diag(sim, self.batch_size)
@@ -45,7 +45,7 @@ class NTXentLoss(nn.Module):
                 negative_samples = sim[self.mask].reshape(N, -1)
 
                 labels = torch.zeros(N).to(positive_samples.device).long()
-                logits = torch.cat((positive_samples, negative_samples), dim=1)
+                logits = torch.cat((positive_samples, negative_samples), dim=1).float()
                 loss = self.criterion(logits, labels)
                 loss /= N
                 total_loss += loss

@@ -26,6 +26,7 @@ def train(model, optimizer, loss_fn, train_loader, scaler, args):
         
         with autocast(device_type='cuda'):
             _, zs = model(augmentations)
+            zs = [z.float() for z in zs]
             
             loss = loss_fn(zs)
         if torch.is_autocast_enabled():
