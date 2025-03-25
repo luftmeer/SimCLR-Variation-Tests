@@ -43,6 +43,7 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
         with open(log_path, 'a', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=row.keys())
             if not file_exists:
+                f.write(f"#{str(args)}\n")
                 writer.writerow(args)
                 writer.writeheader()
             writer.writerow(row)
