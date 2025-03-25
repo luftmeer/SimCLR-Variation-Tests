@@ -1,11 +1,11 @@
 # This is the default setting for the SimCLR algorithm.
 # Basic Settings
 - encoder: 'resnet18' # The encoder used for training
-- widening: 2
+- widening: 1
 - optimizer: 'Adam' # Either Adam or LARS (TODO)
 - epochs: 1000
 - start_epoch: 0
-- batch_size: 128
+- batch_size: 64
 - half_precision: True
 
 # Dataset Settings

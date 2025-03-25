@@ -5,7 +5,7 @@
 #SBATCH -o ./%x.%j.out
 #SBATCH -e ./%x.%j.err
 #Initial working directory (also --chdir):
-#SBATCH -D ../
+#SBATCH -D ./
 #Notification and type
 #SBATCH --mail-type=NONE
 # Wall clock limit:
@@ -13,9 +13,9 @@
 
 #SBATCH --partition=NvidiaAll
 #Number of nodes and tasks per node:
-#SBATCH --nodes=8
+#SBATCH --nodes=4
 #SBATCH --ntasks-per-node=1
-#SBATCH --ntasks=8
+#SBATCH --ntasks=4
 #SBATCh --cpus-per-task=4
 
 
@@ -31,4 +31,4 @@ export LOGLEVEL_INFO
 export NCCL_DEBUG=INFO
 export NCCL_SOCKET_IFNAME=eth0
 
-srun torchrun --nnodes=8 --nproc_per_node=1 --rdzv_id=$RANDOM --rdzv_backend=c10d --rdzv_endpoint=$head_node:29603 train_ddp.py --slurm_job_id=$SLURM_JOB_ID --config=./config/resnet18/CIFAR10_nowidening_bs128_halfprecision_2augments_8nodes.yaml
+srun torchrun --nnodes=8 --nproc_per_node=1 --rdzv_id=$RANDOM --rdzv_backend=c10d --rdzv_endpoint=$head_node:29603 train_ddp.py --slurm_job_id=$SLURM_JOB_ID --config=./config/resnet18/Imagenette_2widening_bs128_halfprecision_2augments_4nodes.yaml
