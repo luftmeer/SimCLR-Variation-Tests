@@ -9,8 +9,8 @@ class NTXentLoss(nn.Module):
         self.similarity_fn = nn.CosineSimilarity(dim=2)
         self.batch_size = batch_size
         self.temperature = temperature
-        self.mask = self.mask_correlated_samples(batch_size)
         self.device = device
+        self.mask = self.mask_correlated_samples(batch_size)
         
     def mask_correlated_samples(self, batch_size: int):
         N = 2 * batch_size
