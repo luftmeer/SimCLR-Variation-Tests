@@ -33,6 +33,27 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         optimizer.step()
     return loss_epoch, accuracy_epoch.compute()
 
+def test(simclr_model, model, criterion, test_loader, device, args):
+    loss_epoch = 0
+    accuracy_epoch = MulticlassAccuracy(num_classes=args.n_classes)
+    model.eval()
+    for step, (img, target) in tqdm(enumerate(test_loader), desc='Evaluating:', total=len(test_loader)):
+        model.zero_grad()
+        
+        img = img.to(device)
+        target = target.to(device)
+        
+        h, _ = simclr_model([img])
+        
+        out = model(h[0])
+        loss = criterion(out, target)
+        
+        accuracy_epoch.update(out, target)
+        loss_epoch += loss.item()
+        
+        return loss_epoch, accuracy_epoch.compute()
+        
+
 def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
@@ -56,6 +77,7 @@ def main(args):
     # Classifier 
     model = nn.Linear(n_features, args.n_classes)
     model = model.to(device)
+    model.train()
     
     # Optimizer & Criterion
     optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
@@ -68,8 +90,12 @@ def main(args):
         print(f"Epoch {epoch+1} | Loss: {loss_epoch} | Accuracy: {accuracy_epoch}")
         
     # Evaluate
+    loss_epoch, accuracy_epoch = test(simclr_model, model, criterion, test_loader, device, args)
+    print(f"[EVAL]\t Loss: {loss_epoch} | Accuracy: {accuracy_epoch}")
     
     # Save Evaluation
+    
+    return print("Finished...")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
