@@ -11,6 +11,7 @@ class NTXentLoss(nn.Module):
         self.temperature = temperature
         self.device = device
         self.mask = self.mask_correlated_samples(batch_size)
+        self.mask = self.mask.to(device)
         
     def mask_correlated_samples(self, batch_size: int):
         N = 2 * batch_size
@@ -19,7 +20,7 @@ class NTXentLoss(nn.Module):
         for i in range(batch_size):
             mask[i, batch_size + i] = 0
             mask[batch_size + i, i] = 0
-        return mask.to(self.device)
+        return mask
     
     
     def forward(self, Zs):
