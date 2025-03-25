@@ -11,6 +11,7 @@
 # Dataset Settings
 - dataset_name: 'CIFAR10'
 - dataset_train: True # Retrieve training dataset
+- n_classes: 10
 
 # SimCLR Settings
 - augmentations: 2 # How many image augmentations are created and learned
@@ -36,3 +37,6 @@
 # Gradient accumulation
 - ga: False
 - ga_count: 8
+
+# Linear Evaluation
+- epochs_le: 100
