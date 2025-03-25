@@ -5,14 +5,11 @@ from simclr.transform import SimCLRTransform
 from simclr.loss import NTXentLoss
 import torch
 from models.encoder import get_encoder
-from models import resnet, densenet
 import tqdm
 from utils.dataset_loader import get_dataset
 from utils import loader
+from utils.log_loss import log_loss
 import yaml
-from filelock import FileLock
-import socket
-import csv
 import time
 from torch.amp import autocast, GradScaler
 
@@ -49,35 +46,6 @@ def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
     gathered[dist.get_rank()] = tensor
 
     return torch.cat(gathered, dim=0)
-
-def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: float):
-    log_file = f"{args.slurm_job_id}-{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
-    
-    rank = dist.get_rank()
-    world_size = dist.get_world_size()
-    
-    row = {
-        'epoch': epoch+1,
-        'rank': rank,
-        'global_rank': int(os.environ["RANK"]),
-        'world_size': world_size,
-        'loss': float(loss),
-        'host': socket.gethostname(),
-        'elapsed_time': elapsed_time,
-    }
-
-    # Shared file path (can be an absolute path if needed)
-    log_path = os.path.join(os.getcwd(), 'metrics', args.dataset_name, log_file)
-    lock_path = log_path + ".lock"
-
-    # Use FileLock to prevent simultaneous write
-    with FileLock(lock_path):
-        file_exists = os.path.isfile(log_path)
-        with open(log_path, 'a', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=row.keys())
-            if not file_exists:
-                writer.writeheader()
-            writer.writerow(row)
 
 def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args):
     total_loss = 0
@@ -131,7 +99,7 @@ def main(args):
     
     train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN, args=args)
 
-    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+    train_sampler = DistributedSampler(train_dataset)
 
     train_loader = torch.utils.data.DataLoader(
             train_dataset,
