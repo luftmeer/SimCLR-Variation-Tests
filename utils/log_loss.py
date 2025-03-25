@@ -48,8 +48,8 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
             writer.writerow(row)
 
 
-def log_evaluation(epoch: int, loss, accuracy, args: argparse.Namespace, elapsed_time: float):
-    log_file = f"{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
+def log_evaluation(epoch: int, loss, accuracy, args: argparse.Namespace, elapsed_time: float, cpt_epoch: int):
+    log_file = f"{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature, f"cpt_epoch{cpt_epoch}"])}.csv"
     
     row = {
             'epoch': epoch+1,
@@ -63,7 +63,6 @@ def log_evaluation(epoch: int, loss, accuracy, args: argparse.Namespace, elapsed
         log_path = os.path.join(os.getcwd(), 'metrics',  args.dataset_name, 'linear_evaluation', str(args.slurm_job_id), log_file)
     else:
         log_path = os.path.join(os.getcwd(), 'metrics', args.dataset_name, 'linear_evaluation', log_file)
-    lock_path = log_path + ".lock"
 
 
     file_exists = os.path.isfile(log_path)

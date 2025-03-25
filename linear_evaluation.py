@@ -13,6 +13,7 @@ from utils.log_loss import log_evaluation
 import time
 
 from tqdm import tqdm
+import os
 
 def train(simclr_model, model, optimizer, criterion, train_loader, device, args):
     accuracy_epoch = MulticlassAccuracy(num_classes=args.n_classes)
@@ -70,53 +71,65 @@ def main(args):
     # Encoder
     encoder, n_features = get_encoder(encoder=args.encoder, widening=args.widening)
     
-    # Model
-    simclr_model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=device).to(device)
-    simclr_model_state, cpt_epoch = load_model(path=args.checkpoint, device=device, eval=True)
-    simclr_model.load_state_dict(simclr_model_state)
-    simclr_model.eval() # Freeze Model
+    # Check if checkpoint is a directory or a path to a file
+    if os.path.isdir(args.checkpoint):
+        files = os.listdir(args.checkpoint)
+        paths = [args.checkpoint+file for file in files]
+    elif os.path.isfile(args.checkpoint):
+        paths = [args.checkpoint]
+    else:
+        raise FileExistsError("Given checkpoint not file or path to folder")
     
-    # Classifier 
-    model = nn.Linear(n_features, args.n_classes)
-    model = model.to(device)
-    model.train()
-    
-    # Optimizer & Criterion
-    optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
-    criterion = torch.nn.CrossEntropyLoss()
-    
-    # Train
-    best_accuracy = 0.
-    for epoch in range(args.epochs_le):
+    for path in paths:
+        print(f"Training and evaluating on file: {path}")
+        
+        # Model
+        simclr_model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=device).to(device)
+        simclr_model_state, cpt_epoch = load_model(path=path, device=device, eval=True)
+        simclr_model.load_state_dict(simclr_model_state)
+        simclr_model.eval() # Freeze Model
+        
+        # Classifier 
+        model = nn.Linear(n_features, args.n_classes)
+        model = model.to(device)
+        model.train()
+        
+        # Optimizer & Criterion
+        optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+        criterion = torch.nn.CrossEntropyLoss()
+        
+        # Train
+        best_accuracy = 0.
+        for epoch in range(args.epochs_le):
+            start = time.time()
+            loss_epoch, accuracy_epoch = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
+            end = time.time()
+            
+            print(f"Epoch {epoch+1} | Loss: {loss_epoch} | Accuracy: {accuracy_epoch}")
+            
+            # General save after n-epochs
+            if (epoch+1) %args.save_every_epoch_le == 0:
+                save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer)
+            
+            # Current best model save point
+            if accuracy_epoch > best_accuracy:
+                save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, best_model=True)
+                best_accuracy = accuracy_epoch
+            
+            log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=accuracy_epoch, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch)
+            
+        # Evaluate
         start = time.time()
-        loss_epoch, accuracy_epoch = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
+        loss_epoch, accuracy_epoch = test(simclr_model, model, criterion, test_loader, device, args)
         end = time.time()
         
-        print(f"Epoch {epoch+1} | Loss: {loss_epoch} | Accuracy: {accuracy_epoch}")
+        print(f"[EVAL]\t Loss: {loss_epoch} | Accuracy: {accuracy_epoch}")        
+        log_evaluation(epoch=epoch+1, loss=loss_epoch, accuracy=accuracy_epoch, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch)
         
-        # General save after n-epochs
-        if (epoch+1) %args.save_every_epoch_le == 0:
-            save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer)
         
-        # Current best model save point
-        if accuracy_epoch > best_accuracy:
-            save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, best_model=True)
-            best_accuracy = accuracy_epoch
-        
-        log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=accuracy_epoch, args=args, elapsed_time=end-start)
-        
-    # Evaluate
-    start = time.time()
-    loss_epoch, accuracy_epoch = test(simclr_model, model, criterion, test_loader, device, args)
-    end = time.time()
-    
-    print(f"[EVAL]\t Loss: {loss_epoch} | Accuracy: {accuracy_epoch}")        
-    log_evaluation(epoch=epoch+1, loss=loss_epoch, accuracy=accuracy_epoch, args=args, elapsed_time=end-start)
-    
-    
-    # Save Evaluation
-    print("Save final model")
-    save_evaluation(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch+1)
+        # Save Evaluation
+        print("Save final model")
+        save_evaluation(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch+1)
     
     return print("Finished...")
 
