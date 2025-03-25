@@ -32,7 +32,7 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
 
     # Shared file path (can be an absolute path if needed)
     if args.slurm_job_id:
-        log_path = os.path.join(os.getcwd(), 'metrics', str(args.slurm_job_id), args.dataset_name, log_file)
+        log_path = os.path.join(os.getcwd(), 'metrics',  args.dataset_name, str(args.slurm_job_id), log_file)
     else:
         log_path = os.path.join(os.getcwd(), 'metrics', args.dataset_name, log_file)
     lock_path = log_path + ".lock"
@@ -44,6 +44,5 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
             writer = csv.DictWriter(f, fieldnames=row.keys())
             if not file_exists:
                 f.write(f"#{str(args)}\n")
-                writer.writerow(args)
                 writer.writeheader()
             writer.writerow(row)
