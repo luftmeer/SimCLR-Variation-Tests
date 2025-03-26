@@ -5,7 +5,7 @@
 - optimizer: 'Adam' # Either Adam or LARS (TODO)
 - epochs: 1000
 - start_epoch: 0
-- batch_size: 64
+- batch_size: 32
 - half_precision: True
 
 # Dataset Settings
