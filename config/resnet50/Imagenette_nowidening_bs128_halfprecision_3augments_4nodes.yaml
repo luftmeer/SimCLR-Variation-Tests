@@ -1,0 +1,43 @@
+# This is the default setting for the SimCLR algorithm.
+# Basic Settings
+- encoder: 'resnet50' # The encoder used for training
+- widening: 1
+- optimizer: 'Adam' # Either Adam or LARS (TODO)
+- epochs: 1000
+- start_epoch: 0
+- batch_size: 128
+- half_precision: True
+
+# Dataset Settings
+- dataset_name: 'Imagenette'
+- dataset_train: True # Retrieve training dataset
+- n_classes: 10
+
+# SimCLR Settings
+- augmentations: 3 # How many image augmentations are created and learned
+- resize: 224 # Resize the image to this size
+- projection_dim: 128 # Projection dimension for the linear classifier used by SimCLR
+- temperature: 0.5 # Temperature is used for the similarity function
+
+# Additional Settings
+- resume: False # Continue from a previous checkpoint. Note: A checkpoint file needs to be given.
+- seed: 42 # Seed for numpy and torch
+- save_every_epoch: 50 # Save the current state of the model after each nth Epoch
+
+# Hugging Face
+# IMPORTANT: Don't store your Hugging Face Token in any file and upload it. Rather use env variable HF_TOKEN
+- HF_TOKEN: NULL
+
+# Distributed Computation Settings
+- dataset_workers: 8
+
+# Metrics
+- metrics: True
+
+# Gradient accumulation
+- ga: False
+- ga_count: 8
+
+# Linear Evaluation
+- epochs_le: 100
+- save_every_epoch_le: 10
