@@ -14,8 +14,6 @@ import time
 from torch.amp import autocast, GradScaler
 
 # DDP
-import torch.nn.functional as F
-import torch.multiprocessing as mp
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
@@ -113,10 +111,18 @@ def main(args):
 
     encoder, n_features = get_encoder(encoder=args.encoder, widening=args.widening)
 
+    model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=local_rank).to(local_rank)
+    
+    if args.optimizer == 'Adam':
+        optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+    
     if args.resume:
-        start_epoch = args.start_epoch
+        cpt = loader.load_model(path=args.checkpoint, device=local_rank, eval=False)
+        start_epoch = cpt['epoch']
+        model.load_state_dict(cpt['model_state_dict'])
+        optimizer.load_state_dict(cpt['optimizer'])
+        
     else:
-        model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=local_rank).to(local_rank)
         start_epoch = 0
     
     loss_fn = NTXentLoss(batch_size=args.batch_size*dist.get_world_size(), device=local_rank).to(local_rank)
@@ -125,8 +131,6 @@ def main(args):
     model = DDP(model, device_ids=[local_rank])
     model.to(local_rank)
     
-    if args.optimizer == 'Adam':
-        optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
         
     if args.half_precision:
         scaler = GradScaler()
@@ -163,7 +167,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--config', '-c', type=str, default='./config/default.yaml', help='Config file to run the training')
     
-    parser.add_argument('--checkpoint', type=object, default=None, help='Add your checkpoint here if you want to resume a previous training.')
+    parser.add_argument('--checkpoint', type=str, default=None, help='Add your checkpoint here if you want to resume a previous training.')
     
     parser.add_argument('--slurm_job_id', type=int, default=None)
     
