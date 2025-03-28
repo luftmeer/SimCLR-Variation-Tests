@@ -21,6 +21,9 @@ import torch.distributed as dist
 import os
 from torch.distributed.elastic.multiprocessing.errors import record
 
+# LARS Optimizer
+from flash.core.optimizers import LARS
+
 
 def ddp_setup():
    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
@@ -98,7 +101,7 @@ def main(args):
     
     train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN, args=args)
 
-    train_sampler = DistributedSampler(train_dataset)
+    train_sampler = DistributedSampler(train_dataset, num_replicas=dist.get_world_size(), rank=local_rank, shuffle=True)
 
     train_loader = torch.utils.data.DataLoader(
             train_dataset,
@@ -115,6 +118,10 @@ def main(args):
     
     if args.optimizer == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+        scheduler = None
+    elif args.optimizer == 'LARS':
+        optimizer = LARS(model.parameters(), lr=0.3*(args.batch_size/256), weight_decay=1e-6)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=0, last_epoch=-1)
     
     if args.resume:
         cpt = loader.load_model(path=args.checkpoint, device=local_rank, eval=False)
@@ -148,6 +155,9 @@ def main(args):
         
         print(f'Epoch {epoch+1} | Global Rank {global_rank} | Local Rank {local_rank} | Loss: {loss_epoch}')
         
+        if scheduler:
+            scheduler.step()
+        
         if args.metrics:
             log_loss(epoch=epoch, loss=loss_epoch, args=args, elapsed_time=end-start)
             
@@ -155,8 +165,9 @@ def main(args):
             print(f"Saving model at Epoch {epoch+1}")
             loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args)
     
-    print(f"Saving final model at Epoch {epoch+1}")
-    loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args)
+    if global_rank == 0:
+        print(f"Saving final model at Epoch {epoch+1}")
+        loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args)
     destroy_process_group()
     
 if __name__ == '__main__':

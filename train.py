@@ -17,6 +17,8 @@ import csv
 import time
 from torch.amp import autocast, GradScaler
 import os
+# LARS Optimizer
+from flash.core.optimizers import LARS
 
 def train(model, optimizer, loss_fn, train_loader, scaler, args):
     total_loss = 0
@@ -73,6 +75,10 @@ def main(args):
 
     if args.optimizer == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+        scheduler = None
+    elif args.optimizer == 'LARS':
+        optimizer = LARS(model.parameters(), lr=0.3*(args.batch_size/256), weight_decay=1e-6)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=0, last_epoch=-1)
     
     if args.resume:
         cpt = loader.load_model(path=args.checkpoint, device=device, eval=False)
@@ -103,6 +109,9 @@ def main(args):
         end = time.time()
         
         print(f'Epoch {epoch+1} | Loss: {loss_epoch}')
+        
+        if scheduler:
+            scheduler.step()
         
         if args.metrics:
             log_loss(epoch=epoch, loss=loss_epoch, args=args, elapsed_time=end-start)
