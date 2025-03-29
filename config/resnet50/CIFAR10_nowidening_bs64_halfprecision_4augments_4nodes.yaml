@@ -16,7 +16,7 @@
 # SimCLR Settings
 - augmentations: 4 # How many image augmentations are created and learned
 - resize: 224 # Resize the image to this size
-- projection_dim: 128 # Projection dimension for the linear classifier used by SimCLR
+- projection_dim: 64 # Projection dimension for the linear classifier used by SimCLR
 - temperature: 0.5 # Temperature is used for the similarity function
 
 # Additional Settings
