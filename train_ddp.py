@@ -142,8 +142,9 @@ def main(args):
     if args.half_precision:
         scaler = GradScaler()
 
-    # Anomaly detection -> In case of NaN resulting from the loss function
-    torch.autograd.set_detect_anomaly(True)
+    if args.debug:
+        # Anomaly detection -> In case of NaN resulting from the loss function
+        torch.autograd.set_detect_anomaly(True)
 
     model.train()
     for epoch in range(start_epoch, args.epochs):        
@@ -184,6 +185,8 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint', type=str, default=None, help='Add your checkpoint here if you want to resume a previous training.')
     
     parser.add_argument('--slurm_job_id', type=int, default=None)
+    
+    parser.add_argument('--debug', action='store_true')
     
     # Parse arguments known up till here, the rest via config file
     args = parser.parse_known_args()[0]
