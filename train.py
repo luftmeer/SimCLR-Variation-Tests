@@ -99,6 +99,9 @@ def main(args):
     else:
             scaler = None
 
+    # Anomaly detection -> In case of NaN resulting from the loss function
+    torch.autograd.set_detect_anomaly(True)
+
     model.train()
     for epoch in range(start_epoch, args.epochs):
         
