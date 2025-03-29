@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from collections import deque
 import pandas as pd
 from torch.utils.tensorboard import SummaryWriter
-import wandb
 import warnings
 
 class TrainingMonitor:
@@ -20,7 +19,6 @@ class TrainingMonitor:
         self.batch_indices = deque(maxlen=maxlen)
 
         self.tb_writer = SummaryWriter(log_dir=os.path.join(self.save_dir, "tensorboard")) if self.enabled and self.rank == 0 else None
-        self.use_wandb = enabled and wandb.run is not None
 
     def log(self, model, loss_value, optimizer, batch_idx, epoch=None):
         if not self.enabled or self.rank != 0:
@@ -36,7 +34,7 @@ class TrainingMonitor:
 
         # Warn if gradient norm is too large
         if grad_norm > 1000:
-            warnings.warn(f"Large gradient norm detected: {grad_norm:.2f} at batch {batch_idx}")
+            warnings.warn(f"🚨 Large gradient norm detected: {grad_norm:.2f} at batch {batch_idx}")
 
         # Get learning rate (assumes 1 param group)
         lr = optimizer.param_groups[0]['lr']
@@ -53,16 +51,6 @@ class TrainingMonitor:
             self.tb_writer.add_scalar("Loss", loss_value, step)
             self.tb_writer.add_scalar("Gradient Norm", grad_norm, step)
             self.tb_writer.add_scalar("Learning Rate", lr, step)
-
-        # Log to Weights & Biases
-        if self.use_wandb:
-            wandb.log({
-                "loss": loss_value,
-                "gradient_norm": grad_norm,
-                "learning_rate": lr,
-                "batch": batch_idx,
-                "epoch": epoch
-            })
 
         # Plot and save
         if batch_idx % self.plot_every == 0:

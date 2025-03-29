@@ -26,8 +26,6 @@ from flash.core.optimizers import LARS
 
 # Logging and Monitoring
 from utils.logger import TrainingMonitor
-import wandb
-from datetime import datetime
 
 
 def ddp_setup():
@@ -125,22 +123,6 @@ def main(args):
     torch.manual_seed(args.seed)
     
     # Monitoring
-    if local_rank == 0:
-        wandb.init(
-            project="simclr-variation",
-            name=f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{args.slurm_job_id}",
-            config={
-                    "batch_size": args.batch_size*dist.get_world_size(),
-                    "epochs": args.epochs,
-                    "learning_rate": args.lr,
-                    "weight_decay": args.weight_decay,
-                    "temperature": args.temperature,
-                    "model": args.encoder,
-                    "dataset": args.dataset_name,
-                    "slurm_job_id": args.slurm_job_id,
-                }
-        )
-
     monitor = TrainingMonitor(
         save_dir=f'logs/{args.dataset_name}/{args.slurm_job_id}/',
         plot_every=100,
