@@ -2,11 +2,16 @@
 # Basic Settings
 - encoder: 'resnet18' # The encoder used for training
 - widening: 2
-- optimizer: 'Adam' # Either Adam or LARS (TODO)
 - epochs: 1000
 - start_epoch: 0
 - batch_size: 64
 - half_precision: True
+
+# Anything Optimizer
+- optimizer: 'Adam'
+- lr: 1e-3
+- weight_decay: 0
+- eps: 1e-08
 
 # Dataset Settings
 - dataset_name: 'Imagenette'

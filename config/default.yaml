@@ -1,12 +1,17 @@
 # This is the default setting for the SimCLR algorithm.
 # Basic Settings
-- encoder: 'resnet18' # The encoder used for training
+- encoder: 'resnet50' # The encoder used for training
 - widening: 1
-- optimizer: 'Adam' # Either Adam or LARS (TODO)
 - epochs: 1000
 - start_epoch: 0
 - batch_size: 128
 - half_precision: True
+
+# Anything Optimizer
+- optimizer: 'Adam'
+- lr: 1e-3
+- weight_decay: 0
+- eps: 1e-08
 
 # Dataset Settings
 - dataset_name: 'CIFAR10'
@@ -14,9 +19,9 @@
 - n_classes: 10
 
 # SimCLR Settings
-- augmentations: 2 # How many image augmentations are created and learned
+- augmentations: 4 # How many image augmentations are created and learned
 - resize: 224 # Resize the image to this size
-- projection_dim: 128 # Projection dimension for the linear classifier used by SimCLR
+- projection_dim: 64 # Projection dimension for the linear classifier used by SimCLR
 - temperature: 0.5 # Temperature is used for the similarity function
 
 # Additional Settings
