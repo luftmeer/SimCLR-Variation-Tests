@@ -24,6 +24,11 @@ from torch.distributed.elastic.multiprocessing.errors import record
 # LARS Optimizer
 from flash.core.optimizers import LARS
 
+# Logging and Monitoring
+from utils.logger import TrainingMonitor
+import wandb
+from datetime import datetime
+
 
 def ddp_setup():
    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
@@ -48,7 +53,7 @@ def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
 
     return torch.cat(gathered, dim=0)
 
-def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args):
+def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, monitor, epoch, args):
     total_loss = 0
     for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
         optimizer.zero_grad()
@@ -65,13 +70,34 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args):
             loss = loss_fn(zs_all)
         if torch.is_autocast_enabled():
             scaler.scale(loss).backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            
+            monitor.log(
+                model=model,
+                loss_value=loss.item(),
+                optimizer=optimizer,
+                batch_idx=i,
+                epoch=epoch
+                )
+            
             if args.ga and i % args.ga_count == 0 or not args.ga or i+1 == len(train_loader):
                 scaler.step(optimizer)
             scaler.update()
         else:
             
             loss.backward()
-        
+
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            
+            monitor.log(
+                model=model,
+                loss_value=loss.item(),
+                optimizer=optimizer,
+                batch_idx=i,
+                epoch=epoch
+                )
+            
+            
         # Gradient Accumulation
         # First Case: Gradient Accumulation is active and the n-th batch is rached which is divisible by ga_count
         # Second Case: Gradient Accumulation is not available -> always do the step
@@ -98,6 +124,31 @@ def main(args):
     # Randomness
     torch.manual_seed(args.seed)
     
+    # Monitoring
+    if local_rank == 0:
+        wandb.init(
+            project="simclr-variation",
+            name=f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{args.slurm_job_id}",
+            config={
+                    "batch_size": args.batch_size*dist.get_world_size(),
+                    "epochs": args.epochs,
+                    "learning_rate": args.lr,
+                    "weight_decay": args.weight_decay,
+                    "temperature": args.temperature,
+                    "model": args.encoder,
+                    "dataset": args.dataset_name,
+                    "slurm_job_id": args.slurm_job_id,
+                }
+        )
+
+    monitor = TrainingMonitor(
+        save_dir=f'logs/{args.dataset_name}/{args.slurm_job_id}/',
+        plot_every=100,
+        maxlen=500,
+        enabled=True,
+        rank=local_rank
+    )
+    
     
     train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN, args=args)
 
@@ -117,7 +168,7 @@ def main(args):
     model = SimCLR(encoder=encoder, n_features=n_features, projection_dim=args.projection_dim, image_size=args.resize, batch_size=args.batch_size, device=local_rank).to(local_rank)
     
     if args.optimizer == 'Adam':
-        optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         scheduler = None
     elif args.optimizer == 'LARS':
         optimizer = LARS(model.parameters(), lr=0.3*(args.batch_size/256), weight_decay=1e-6)
@@ -153,7 +204,7 @@ def main(args):
         
         start = time.time()
         
-        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank, scaler, args)
+        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank, scaler, monitor, epoch, args)
         
         end = time.time()
         
