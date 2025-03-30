@@ -157,7 +157,7 @@ def main(args):
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=0, last_epoch=-1)
     
     if args.resume:
-        cpt = loader.load_model(path=args.checkpoint, device=local_rank, eval=False)
+        cpt = loader.load_model(path=args.checkpoint, device=f'cuda:{local_rank}', eval=False)
         start_epoch = cpt['epoch']
         model.load_state_dict(cpt['model_state_dict'])
         optimizer.load_state_dict(cpt['optimizer'])
