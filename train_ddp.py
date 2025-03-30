@@ -229,7 +229,7 @@ if __name__ == '__main__':
         for elem in config:
             k, v = elem.popitem()
             if k in ['lr', 'weight_decay', 'eps']:
-                parser.add_argument(f'--{k}', default=v, type=float(v))
+                parser.add_argument(f'--{k}', default=v, type=float)
             else:
                 parser.add_argument(f"--{k}", default=v, type=type(v))    
 
