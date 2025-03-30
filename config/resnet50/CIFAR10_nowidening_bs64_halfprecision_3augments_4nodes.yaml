@@ -4,7 +4,7 @@
 - widening: 1
 - epochs: 1000
 - start_epoch: 0
-- batch_size: 64
+- batch_size: 32
 - half_precision: True
 
 # Anything Optimizer
@@ -40,8 +40,8 @@
 - metrics: True
 
 # Gradient accumulation
-- ga: False
-- ga_count: 8
+- ga: True
+- ga_count: 4
 
 # Linear Evaluation
 - epochs_le: 100
