@@ -221,6 +221,8 @@ if __name__ == '__main__':
     
     parser.add_argument('--debug', action='store_true')
     
+    parser.add_argument('--lr', type=float) # Pre-define learning rate to compensate .yaml-loading issue
+    
     # Parse arguments known up till here, the rest via config file
     args = parser.parse_known_args()[0]
     
