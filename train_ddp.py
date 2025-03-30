@@ -221,8 +221,6 @@ if __name__ == '__main__':
     
     parser.add_argument('--debug', action='store_true')
     
-    parser.add_argument('--lr', type=float) # Pre-define learning rate to compensate .yaml-loading issue
-    
     # Parse arguments known up till here, the rest via config file
     args = parser.parse_known_args()[0]
     
@@ -230,7 +228,10 @@ if __name__ == '__main__':
         config = yaml.safe_load(file)
         for elem in config:
             k, v = elem.popitem()
-            parser.add_argument(f"--{k}", default=v, type=type(v))    
+            if k in ['lr', 'weight_decay', 'eps']:
+                parser.add_argument(f'--{k}', default=v, type=float(v))
+            else:
+                parser.add_argument(f"--{k}", default=v, type=type(v))    
 
     args = parser.parse_args()
     
