@@ -16,6 +16,7 @@ class TrainingMonitor:
         self.gradient_norms = deque(maxlen=maxlen)
         self.losses = deque(maxlen=maxlen)
         self.lrs = deque(maxlen=maxlen)
+        self.low_grad_counts = deque(maxlen=maxlen)
         self.batch_indices = deque(maxlen=maxlen)
 
         self.tb_writer = SummaryWriter(log_dir=os.path.join(self.save_dir, "tensorboard")) if self.enabled and self.rank == 0 else None
@@ -24,19 +25,28 @@ class TrainingMonitor:
         if not self.enabled or self.rank != 0:
             return
 
-        # Compute gradient norm
+        # Compute gradient norm and low gradient count
         grad_norm = 0.0
-        for p in model.parameters():
+        very_low_grad_count = 0
+        for name, p in model.named_parameters():
             if p.grad is not None:
                 param_norm = p.grad.data.norm(2)
                 grad_norm += param_norm.item() ** 2
+                update = (p.grad * optimizer.param_groups[0]['lr']).abs().mean().item()
+                if update < 1e-5:
+                    very_low_grad_count += 1
+
         grad_norm = grad_norm ** 0.5
 
-        # Warn if gradient norm is too large
+        # Warnings
         if grad_norm > 1000:
             warnings.warn(f"Large gradient norm detected: {grad_norm:.2f} at batch {batch_idx}")
+        if grad_norm < 0.1:
+            warnings.warn(f"Gradient norm very low ({grad_norm:.4f}) at batch {batch_idx}. Potential vanishing gradients.")
+        if very_low_grad_count > 0:
+            warnings.warn(f"{very_low_grad_count} parameters have very small update magnitudes at batch {batch_idx}.")
 
-        # Get learning rate (assumes 1 param group)
+        # Learning rate
         lr = optimizer.param_groups[0]['lr']
 
         # Append to buffers
@@ -44,6 +54,7 @@ class TrainingMonitor:
         self.gradient_norms.append(grad_norm)
         self.losses.append(loss_value)
         self.lrs.append(lr)
+        self.low_grad_counts.append(very_low_grad_count)
         self.batch_indices.append(step)
 
         # Log to TensorBoard
@@ -51,6 +62,7 @@ class TrainingMonitor:
             self.tb_writer.add_scalar("Loss", loss_value, step)
             self.tb_writer.add_scalar("Gradient Norm", grad_norm, step)
             self.tb_writer.add_scalar("Learning Rate", lr, step)
+            self.tb_writer.add_scalar("Low Grad Count", very_low_grad_count, step)
 
         # Log logits if available
         if logits is not None:
@@ -85,12 +97,23 @@ class TrainingMonitor:
         ax2.set_ylabel("Loss", color="tab:red")
         ax2.tick_params(axis='y', labelcolor="tab:red")
 
-        plt.xlabel("Batch")
-        fig.tight_layout()
+        # Optional: overlay low grad counts
+        fig2, ax3 = plt.subplots(figsize=(8, 4))
+        ax3.set_title("Very Low Gradient Count")
+        ax3.plot(x, self.low_grad_counts, label="Low Grad Count", color="tab:purple")
+        ax3.set_xlabel("Batch")
+        ax3.set_ylabel("Count")
+        ax3.grid(True)
 
-        filename = f"monitor_epoch{epoch}_batch{batch_idx}.png"
-        plt.savefig(os.path.join(self.save_dir, filename))
-        plt.close()
+        fig.tight_layout()
+        fig2.tight_layout()
+
+        filename1 = f"monitor_epoch{epoch}_batch{batch_idx}.png"
+        filename2 = f"low_grad_epoch{epoch}_batch{batch_idx}.png"
+        fig.savefig(os.path.join(self.save_dir, filename1))
+        fig2.savefig(os.path.join(self.save_dir, filename2))
+        plt.close(fig)
+        plt.close(fig2)
 
     def _save_csv(self):
         df = pd.DataFrame({
@@ -98,5 +121,6 @@ class TrainingMonitor:
             "loss": list(self.losses),
             "grad_norm": list(self.gradient_norms),
             "lr": list(self.lrs),
+            "low_grad_count": list(self.low_grad_counts),
         })
         df.to_csv(os.path.join(self.save_dir, "training_log.csv"), index=False)
