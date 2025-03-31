@@ -20,7 +20,7 @@ class TrainingMonitor:
 
         self.tb_writer = SummaryWriter(log_dir=os.path.join(self.save_dir, "tensorboard")) if self.enabled and self.rank == 0 else None
 
-    def log(self, model, loss_value, optimizer, batch_idx, epoch=None):
+    def log(self, model, loss_value, optimizer, batch_idx, epoch=None, logits=None):
         if not self.enabled or self.rank != 0:
             return
 
@@ -34,7 +34,7 @@ class TrainingMonitor:
 
         # Warn if gradient norm is too large
         if grad_norm > 1000:
-            warnings.warn(f"🚨 Large gradient norm detected: {grad_norm:.2f} at batch {batch_idx}")
+            warnings.warn(f"Large gradient norm detected: {grad_norm:.2f} at batch {batch_idx}")
 
         # Get learning rate (assumes 1 param group)
         lr = optimizer.param_groups[0]['lr']
@@ -51,6 +51,20 @@ class TrainingMonitor:
             self.tb_writer.add_scalar("Loss", loss_value, step)
             self.tb_writer.add_scalar("Gradient Norm", grad_norm, step)
             self.tb_writer.add_scalar("Learning Rate", lr, step)
+
+        # Log logits if available
+        if logits is not None:
+            log_min = logits.min().item()
+            log_max = logits.max().item()
+            log_mean = logits.mean().item()
+
+            if self.tb_writer:
+                self.tb_writer.add_scalar("Logits/Min", log_min, step)
+                self.tb_writer.add_scalar("Logits/Max", log_max, step)
+                self.tb_writer.add_scalar("Logits/Mean", log_mean, step)
+
+            if batch_idx % self.plot_every == 0:
+                print(f"[Logits] Batch {batch_idx} | min: {log_min:.4f}, max: {log_max:.4f}, mean: {log_mean:.4f}")
 
         # Plot and save
         if batch_idx % self.plot_every == 0:

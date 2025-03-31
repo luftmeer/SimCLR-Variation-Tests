@@ -12,6 +12,7 @@ from utils.log_loss import log_loss
 import yaml
 import time
 from torch.amp import autocast, GradScaler
+from itertools import combinations
 
 # DDP
 from torch.utils.data.distributed import DistributedSampler
@@ -64,8 +65,12 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, monitor, 
             for z in zs:
                 zs_all.append(gather_projections(z))
             
-            zs_all = [z.float() for z in zs_all]
-            loss = loss_fn(zs_all)
+            #zs_all = [z.float() for z in zs_all]
+            
+            for z_i, z_j in combinations(zs_all, 2):
+                loss, logits = loss_fn(z_i.float(), z_j.float())
+            
+            #loss = loss_fn(zs_all)
         if torch.is_autocast_enabled():
             scaler.scale(loss).backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -75,7 +80,8 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, monitor, 
                 loss_value=loss.item(),
                 optimizer=optimizer,
                 batch_idx=i,
-                epoch=epoch
+                epoch=epoch,
+                logits=logits
                 )
             
             if args.ga and i % args.ga_count == 0 or not args.ga or i+1 == len(train_loader):
@@ -92,7 +98,8 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, monitor, 
                 loss_value=loss.item(),
                 optimizer=optimizer,
                 batch_idx=i,
-                epoch=epoch
+                epoch=epoch,
+                logits=logits
                 )
             
             
