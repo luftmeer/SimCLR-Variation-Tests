@@ -219,7 +219,7 @@ def main(args):
             
         if (epoch+1) % args.save_every_epoch == 0 and global_rank == 0:
             print(f"Saving model at Epoch {epoch+1}")
-            loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args, base_folder=BASE_FOLDER)
+            loader.save_model(model=model, optimizer=optimizer, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args, base_folder=BASE_FOLDER)
     
     if global_rank == 0:
         print(f"Saving final model at Epoch {epoch+1}")
