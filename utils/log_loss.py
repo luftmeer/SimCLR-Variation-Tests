@@ -5,8 +5,8 @@ import csv
 import torch.distributed as dist
 import socket
 
-def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: float):
-    log_file = f"{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
+def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: float, base_folder: str=None):
+    log_file = f"{'_'.join(str(elem) for elem in [args.dataset_name, args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
 
     if dist.is_initialized():
         rank = dist.get_rank()
@@ -30,11 +30,11 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
             'elapsed_time': elapsed_time,
         }
 
-    # Shared file path (can be an absolute path if needed)
-    if args.slurm_job_id:
-        log_path = os.path.join(os.getcwd(), 'metrics',  args.dataset_name, str(args.slurm_job_id), log_file)
-    else:
-        log_path = os.path.join(os.getcwd(), 'metrics', args.dataset_name, log_file)
+    log_path = os.path.join(os.getcwd(), 
+                            base_folder if base_folder else '', 
+                            str(args.slurm_job_id) if args.slurm_job_id else '', 
+                            'metrics', 
+                            log_file)
     lock_path = log_path + ".lock"
 
     # Use FileLock to prevent simultaneous write

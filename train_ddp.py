@@ -28,6 +28,8 @@ from flash.core.optimizers import LARS
 # Logging and Monitoring
 from utils.logger import TrainingMonitor
 
+# Base folder for all runs
+BASE_FOLDER = 'runs'
 
 def ddp_setup():
    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
@@ -125,13 +127,24 @@ def main(args):
     
     local_rank = int(os.environ["LOCAL_RANK"])
     global_rank = int(os.environ["RANK"])
+    device = f'cuda:{local_rank}'
+    
+    cpt = None
+    # If resuming -> overwrite config with "old" one. Keep checkpoint and resume value
+    if args.resume:
+        cpt_path = args.checkpoint
+        
+        cpt = loader.load_model(path=args.checkpoint, device=device)
+        args = cpt['args']
+        args.checkpoint = cpt_path
+        args.resume = True # Reset -> in previous it was False
 
     # Randomness
     torch.manual_seed(args.seed)
     
     # Monitoring
     monitor = TrainingMonitor(
-        save_dir=f'logs/{args.dataset_name}/{args.slurm_job_id}/',
+        save_dir=f'{BASE_FOLDER}/{args.slurm_job_id}/',
         plot_every=100,
         maxlen=500,
         enabled=True,
@@ -164,7 +177,6 @@ def main(args):
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=0, last_epoch=-1)
     
     if args.resume:
-        cpt = loader.load_model(path=args.checkpoint, device=f'cuda:{local_rank}', eval=False)
         start_epoch = cpt['epoch']
         model.load_state_dict(cpt['model_state_dict'])
         optimizer.load_state_dict(cpt['optimizer'])
@@ -203,11 +215,11 @@ def main(args):
             scheduler.step()
         
         if args.metrics:
-            log_loss(epoch=epoch, loss=loss_epoch, args=args, elapsed_time=end-start)
+            log_loss(epoch=epoch, loss=loss_epoch, args=args, elapsed_time=end-start, base_folder=BASE_FOLDER)
             
         if (epoch+1) % args.save_every_epoch == 0 and global_rank == 0:
             print(f"Saving model at Epoch {epoch+1}")
-            loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args)
+            loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args, base_folder=BASE_FOLDER)
     
     if global_rank == 0:
         print(f"Saving final model at Epoch {epoch+1}")
