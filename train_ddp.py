@@ -60,19 +60,20 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, monitor, 
         optimizer.zero_grad()
         
         
-        with autocast(device_type='cuda'):
-            _, zs = model(augmentations)
-       
-            zs_all = []
-            for z in zs:
-                zs_all.append(gather_projections(z))
-            
-            #zs_all = [z.float() for z in zs_all]
-            
-            for z_i, z_j in combinations(zs_all, 2):
-                loss, logits = loss_fn(z_i.float(), z_j.float())
-            
-            #loss = loss_fn(zs_all)
+        #with autocast(device_type='cuda'):
+        _, zs = model(augmentations)
+
+        zs_all = []
+        for z in zs:
+            zs_all.append(gather_projections(z))
+        
+        #zs_all = [z.float() for z in zs_all]
+        
+        for z_i, z_j in combinations(zs_all, 2):
+            loss, logits = loss_fn(z_i.float(), z_j.float())
+        
+        #loss = loss_fn(zs_all)
+        
         if torch.is_autocast_enabled():
             scaler.scale(loss).backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
