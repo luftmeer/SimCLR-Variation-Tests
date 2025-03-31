@@ -17,14 +17,14 @@ class NTXentLoss(nn.Module):
         Instead, given a positive pair, similar to (Chen et al., 2017), we treat the other 2(N − 1) augmented examples within a minibatch as negative examples.
         """
         # When distributed, the batch size is world_size times the given config size.
-        N = z_i.shape[0]
+        N = 2 * self.batch_size
         
         # Dynamically calculate the mask
         mask = torch.ones((N, N), dtype=bool, device=self.device)
         mask.fill_diagonal_(0)
-        for i in range(N // 2):
-            mask[i, i + N // 2] = 0
-            mask[i + N // 2, i] = 0
+        for i in range(self.batch_size):
+            mask[i, i + self.batch_size] = 0
+            mask[i + self.batch_size, i] = 0
         
         z = torch.cat((z_i, z_j), dim=0).float()
 
@@ -33,10 +33,10 @@ class NTXentLoss(nn.Module):
         sim_j_i = torch.diag(sim, -N // 2)
 
         # We have 2N samples, but with Distributed training every GPU gets N examples too, resulting in: 2xNxN
-        positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).reshape(2 * N, 1)
-        negative_samples = sim[self.mask].reshape(N, -1)
+        positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).reshape(N, 1)
+        negative_samples = sim[mask].reshape(N, -1)
 
-        labels = torch.zeros(2 * N, dtype=torch.long, device=positive_samples.device)
+        labels = torch.zeros( N, dtype=torch.long, device=positive_samples.device)
         logits = torch.cat((positive_samples, negative_samples), dim=1).float()
         loss = self.criterion(logits, labels)
         loss /= N
