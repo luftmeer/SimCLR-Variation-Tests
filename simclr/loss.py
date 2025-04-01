@@ -26,7 +26,8 @@ class NTXentLoss(nn.Module):
             mask[i, i + self.batch_size] = 0
             mask[i + self.batch_size, i] = 0
         
-        z = torch.cat((z_i, z_j), dim=0).float()
+        z = torch.cat((z_i, z_j), dim=0)
+        z = nn.functional.normalize(z, dim=1)
 
         sim = self.similarity_fn(z.unsqueeze(1), z.unsqueeze(0)) / self.temperature
         sim_i_j = torch.diag(sim, N // 2)

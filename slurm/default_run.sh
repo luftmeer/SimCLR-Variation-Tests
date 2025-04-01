@@ -51,7 +51,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 # --- Set defaults if not passed ---
-config="${config:-configs/default.yaml}"
+config="${config:-config/default.yaml}"
 encoder="${encoder:-resnet18}"
 epochs="${epochs:-1000}"
 batch_size="${batch_size:-128}"
@@ -150,7 +150,7 @@ srun torchrun --nnodes=4 \
     --config "$config" \
     --encoder "$encoder" \
     --epochs "$epochs" \
-    --batch-size "$batch_size" \
+    --batch_size "$batch_size" \
     --optimizer "$optimizer" \
     --lr "$lr"  \
     --weight_decay "$weight_decay" \
