@@ -11,7 +11,6 @@ from utils import loader
 from utils.log_loss import log_loss
 import yaml
 import time
-from torch.amp import autocast, GradScaler
 from itertools import combinations
 
 # DDP
@@ -54,10 +53,11 @@ def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
 
     return torch.cat(gathered, dim=0)
 
-def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, monitor, epoch, args):
+def train(model, optimizer, loss_fn, train_loader, local_rank, monitor, epoch, args):
     total_loss = 0
     for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
-        optimizer.zero_grad()
+        if args.ga and i % args.ga_count == 0 or not args.ga or i+1 == len(train_loader):
+            optimizer.zero_grad()
         
         
         #with autocast(device_type='cuda'):
@@ -67,31 +67,9 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, scaler, monitor, 
         for z in zs:
             zs_all.append(gather_projections(z))
         
-        #zs_all = [z.float() for z in zs_all]
-        
         for z_i, z_j in combinations(zs_all, 2):
-            loss, logits = loss_fn(z_i.float(), z_j.float())
+            loss, logits = loss_fn(z_i, z_j)
         
-        #loss = loss_fn(zs_all)
-        
-        '''if torch.is_autocast_enabled():
-            scaler.scale(loss).backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            
-            monitor.log(
-                model=model,
-                loss_value=loss.item(),
-                optimizer=optimizer,
-                batch_idx=i,
-                epoch=epoch,
-                logits=logits
-                )
-            
-            if args.ga and i % args.ga_count == 0 or not args.ga or i+1 == len(train_loader):
-                scaler.step(optimizer)
-            scaler.update()
-        else:'''
-            
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -191,9 +169,6 @@ def main(args):
     model = DDP(model, device_ids=[local_rank])
     model.to(local_rank)
     
-        
-    if args.half_precision:
-        scaler = GradScaler()
 
     if args.debug:
         # Anomaly detection -> In case of NaN resulting from the loss function
@@ -206,7 +181,7 @@ def main(args):
         
         start = time.time()
         
-        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank, scaler, monitor, epoch, args)
+        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank, monitor, epoch, args)
         
         end = time.time()
         
