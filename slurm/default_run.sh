@@ -2,8 +2,8 @@
 #b Name and Files (also --job-name)
 #SBATCH -J simclr
 #Output and error (also --output, --error):
-#SBATCH -o ./runs/%j/%x.%j.out
-#SBATCH -e ./runs/%j/%x.%j.err
+#SBATCH --output=./runs/%j/slurm_output.out
+#SBATCH --error=./runs/%j/slurm_error.err
 #Initial working directory (also --chdir):
 #SBATCH -D ./
 #Notification and type
