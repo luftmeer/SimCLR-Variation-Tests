@@ -42,7 +42,7 @@ while [[ "$#" -gt 0 ]]; do
         --resume) resume_flag="--resume" ;;
         --checkpoint) checkpoint="$2"; shift ;;
         # Gradient Acuumulation
-        --gradient-accumulation) gradient_accumulation="$2"; shift ;;
+        --gradient-accumulation) ga_flag="--ga" ;;
         --ga-count) ga_count="$2"; shift ;;
         
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
@@ -65,7 +65,6 @@ resize="${resize:-224}"
 projection_dim="${projection_dim:-64}"
 temperature="${temperature:-0.5}"
 checkpoint="${checkpoint:-NULL}"
-gradient_accumulation="${gradient_accumulation:-False}"
 ga_count="${ga_count:-8}"
 
 
@@ -162,4 +161,4 @@ srun torchrun --nnodes=4 \
     --checkpoint "$checkpoint" \
     --ga "$gradient_accumulation" \
     --ga_count "$ga_count" \
-    $resume_flag
+    $resume_flag $ga_flag

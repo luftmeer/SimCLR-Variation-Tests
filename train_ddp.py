@@ -218,6 +218,8 @@ if __name__ == '__main__':
     
     parser.add_argument('--resume', action='store_true')
     
+    parser.add_argument('--ga', action='store_true')
+    
     # Parse arguments known up till here, the rest via config file
     args = parser.parse_known_args()[0]
     
@@ -227,6 +229,8 @@ if __name__ == '__main__':
             k, v = elem.popitem()
             if k in ['lr', 'weight_decay', 'eps']:
                 parser.add_argument(f'--{k}', default=v, type=float)
+            elif k == 'ga':
+                continue
             else:
                 parser.add_argument(f"--{k}", default=v, type=type(v))    
 
