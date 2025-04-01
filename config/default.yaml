@@ -24,7 +24,7 @@
 - temperature: 0.5 # Temperature is used for the similarity function
 
 # Additional Settings
-- resume: False # Continue from a previous checkpoint. Note: A checkpoint file needs to be given.
+# - resume: False # Continue from a previous checkpoint. Note: A checkpoint file needs to be given.
 - seed: 42 # Seed for numpy and torch
 - save_every_epoch: 50 # Save the current state of the model after each nth Epoch
 

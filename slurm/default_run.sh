@@ -39,7 +39,7 @@ while [[ "$#" -gt 0 ]]; do
         --projection-dim) projection_dim="$2"; shift ;;
         --temperature) temperature="$2"; shift ;;
         # Resume & Checkpoint Loading
-        --resume) resume="$2"; shift ;;
+        --resume) resume_flag="--resume" ;;
         --checkpoint) checkpoint="$2"; shift ;;
         # Gradient Acuumulation
         --gradient-accumulation) gradient_accumulation="$2"; shift ;;
@@ -64,7 +64,6 @@ augmentations="${augmentations:-2}"
 resize="${resize:-224}"
 projection_dim="${projection_dim:-64}"
 temperature="${temperature:-0.5}"
-resume="${resume:-False}"
 checkpoint="${checkpoint:-NULL}"
 gradient_accumulation="${gradient_accumulation:-False}"
 ga_count="${ga_count:-8}"
@@ -160,7 +159,7 @@ srun torchrun --nnodes=4 \
     --resize "$resize" \
     --projection_dim "$projection_dim" \
     --temperature "$temperature" \
-    --resume "$resume" \
     --checkpoint "$checkpoint" \
     --ga "$gradient_accumulation" \
-    --ga_count "$ga_count"
+    --ga_count "$ga_count" \
+    $resume_flag

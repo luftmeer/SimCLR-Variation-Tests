@@ -216,6 +216,8 @@ if __name__ == '__main__':
     
     parser.add_argument('--debug', action='store_true')
     
+    parser.add_argument('--resume', action='store_true')
+    
     # Parse arguments known up till here, the rest via config file
     args = parser.parse_known_args()[0]
     
