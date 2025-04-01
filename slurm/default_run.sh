@@ -18,6 +18,9 @@
 #SBATCH --ntasks=4
 #SBATCh --cpus-per-task=8
 
+resume_flag=""
+ga_flag=""
+
 # --- Argument parsing ---
 while [[ "$#" -gt 0 ]]; do
     case $1 in
