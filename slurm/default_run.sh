@@ -3,7 +3,7 @@
 #SBATCH -J simclr
 #Output and error (also --output, --error):
 #SBATCH -o ./runs/%j/%x.%j.out
-#SBATCH -e ./runs/%j/%x.%j.errg
+#SBATCH -e ./runs/%j/%x.%j.err
 #Initial working directory (also --chdir):
 #SBATCH -D ./
 #Notification and type
