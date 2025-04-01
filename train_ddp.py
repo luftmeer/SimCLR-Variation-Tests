@@ -152,7 +152,14 @@ def main(args):
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         scheduler = None
     elif args.optimizer == 'LARS':
-        optimizer = LARS(model.parameters(), lr=0.3*(args.batch_size/256), weight_decay=1e-6)
+        batch_size = args.batch_size
+        if dist.is_initialized():
+            batch_size *= dist.get_world_size()
+        
+        if args.ga:
+            batch_size *= args.ga_count
+            
+        optimizer = LARS(model.parameters(), lr=0.3*(batch_size/256), weight_decay=1e-6)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=0, last_epoch=-1)
     
     if args.resume:
