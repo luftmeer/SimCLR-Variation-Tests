@@ -7,10 +7,7 @@ import os
 DATASETS = ['CIFAR10', 'STL10', 'Imagenette', 'tiny-imagenet']
 
 def get_dataset(dataset_name: str='CIFAR10', train: bool=True, image_size: int=224, augmentations: int=4, eval:bool=False, **kwargs):
-    if 'args' in kwargs.keys() and kwargs['args'].half_precision:
-        transform = SimCLRTransform(size=image_size, n=augmentations, half_precision=True, eval=eval)
-    else:
-        transform = SimCLRTransform(size=image_size, n=augmentations, eval=eval)
+    transform = SimCLRTransform(size=image_size, n=augmentations, eval=eval)
     root_dir = './data'
     assert dataset_name in DATASETS
     if dataset_name == 'CIFAR10':
