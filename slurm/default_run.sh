@@ -2,8 +2,8 @@
 #b Name and Files (also --job-name)
 #SBATCH -J simclr
 #Output and error (also --output, --error):
-#SBATCH -o .runs/%j/%x.%j.out
-#SBATCH -e .runs/%j/%x.%j.errg
+#SBATCH -o ./runs/%j/%x.%j.out
+#SBATCH -e ./runs/%j/%x.%j.errg
 #Initial working directory (also --chdir):
 #SBATCH -D ./
 #Notification and type
@@ -162,6 +162,6 @@ srun torchrun --nnodes=4 \
     --projection_dim "$projection_dim" \
     --temperature "$temperature" \
     --checkpoint "$checkpoint" \
-    --ga "$gradient_accumulation" \
     --ga_count "$ga_count" \
-    $resume_flag $ga_flag
+    $resume_flag \
+    $ga_flag
