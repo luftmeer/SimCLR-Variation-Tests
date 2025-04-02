@@ -48,13 +48,15 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
             writer.writerow(row)
 
 
-def log_evaluation(epoch: int, loss, accuracy, args: argparse.Namespace, elapsed_time: float, cpt_epoch: int):
+def log_evaluation(epoch: int, loss, accuracy, args: argparse.Namespace, elapsed_time: float, cpt_epoch: int, top1, top5):
     log_file = f"{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature, f"cpt_epoch{cpt_epoch}"])}.csv"
     
     row = {
             'epoch': epoch+1,
             'loss': float(loss),
             'accuracy': accuracy,
+            'top1': top1,
+            'top5': top5,
             'host': socket.gethostname(),
             'elapsed_time': elapsed_time,
         }

@@ -29,6 +29,7 @@ while [[ "$#" -gt 0 ]]; do
         --encoder) encoder="$2"; shift ;;
         --epochs) epochs="$2"; shift ;;
         --batch-size) batch_size="$2"; shift ;;
+        --widening) widening="$2"; shift ;;
         # Optimizer
         --optimizer) optimizer="$2"; shift ;;
         --lr) lr="$2"; shift ;;
@@ -58,6 +59,7 @@ config="${config:-config/default.yaml}"
 encoder="${encoder:-resnet18}"
 epochs="${epochs:-1000}"
 batch_size="${batch_size:-128}"
+widening="${widening:-1}"
 optimizer="${optimizer:-Adam}"
 lr="${lr:-0.001}"
 weight_decay="${weight_decay:-0.}"
@@ -94,6 +96,7 @@ echo "Config file:         $config"
 echo "Encoder:             $encoder"
 echo "Epochs:              $epochs"
 echo "Batch size:          $batch_size"
+echo "Widening:             $widening"
 echo "Optimizer:           $optimizer"
 echo "Learning rate:       $lr"
 echo "Weight decay:        $weight_decay"
@@ -103,9 +106,9 @@ echo "Augmentations:       $augmentations"
 echo "Resize:              $resize"
 echo "Projection dim:      $projection_dim"
 echo "Temperature:         $temperature"
-echo "Resume:              $resume"
+echo "Resume:              $resume_flag"
 echo "Checkpoint:          $checkpoint"
-echo "Gradient Accum:      $gradient_accumulation"
+echo "Gradient Accum:      $ga_flag"
 echo "Accum steps:         $ga_count"
 echo "Head node:           $head_node"
 echo "NCCL IFACE:          ${NCCL_SOCKET_IFNAME:-eth0}"
@@ -122,6 +125,7 @@ config: $config
 encoder: $encoder
 epochs: $epochs
 batch_size: $batch_size
+widening: $widening
 optimizer: $optimizer
 lr: $lr
 weight_decay: $weight_decay
@@ -152,6 +156,7 @@ srun torchrun --nnodes=4 \
     --encoder "$encoder" \
     --epochs "$epochs" \
     --batch_size "$batch_size" \
+    --widening "$widening" \
     --optimizer "$optimizer" \
     --lr "$lr"  \
     --weight_decay "$weight_decay" \
