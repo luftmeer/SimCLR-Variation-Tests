@@ -66,7 +66,7 @@ for ckpt_file in "$checkpoint_dir"/*.cpt; do
 
         slurm_id=$(sbatch --parsable slurm/default_linear_evaluation.sh \
             --id "$job_id" \
-            --checkpoint_path "$ckpt_file" \
+            --checkpoint "$ckpt_file" \
             --batch-size "$batch_size" \
             --optimizer "$optimizer" \
             --lr "$lr" \
