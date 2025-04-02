@@ -208,7 +208,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--checkpoint', type=str)
     
-    parser.add_argument('--config', type=str, default='./config/le/default.yaml')
+    parser.add_argument('--config', type=str, default='./config/linear_evaluation_default.yaml')
     
     parser.add_argument('--slurm_job_id', type=int, default=None)
     
