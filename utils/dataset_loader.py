@@ -21,7 +21,7 @@ def get_dataset(dataset_name: str='CIFAR10', train: bool=True, image_size: int=2
     elif dataset_name == 'STL10':
         ds = torchvision.datasets.STL10(
             root=root_dir,
-            split='unlabeled',
+            split='train+unlabeled' if train else 'test',
             transform=transform,
             download=True,
         )
