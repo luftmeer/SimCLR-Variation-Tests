@@ -77,13 +77,13 @@ mkdir -p "$output_dir"
 python linear_evaluation.py \
     --slurm_job_id "$job_id" \
     --checkpoint "$ckpt_file" \
-    --batch-size "$batch_size" \
+    --batch_size "$batch_size" \
     --optimizer "$optimizer" \
     --lr "$lr" \
-    --weight-decay "$weight_decay" \
-    --dataset-name "$dataset_name" \
+    --weight_decay "$weight_decay" \
+    --dataset_name "$dataset_name" \
     --n_classes "$n_classes" \
     --seed "$seed" \
-    --save-every-epoch "$save_every_epoch" \
-    --ga-count "$ga_count" \
+    --save_every_epoch "$save_every_epoch" \
+    --ga_count "$ga_count" \
     $ga_flag
