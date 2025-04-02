@@ -76,7 +76,7 @@ mkdir -p "$output_dir"
 # --- Run evaluation ---
 python linear_evaluation.py \
     --slurm_job_id "$job_id" \
-    --checkpoint "$ckpt_file" \
+    --checkpoint "$checkpoint" \
     --batch_size "$batch_size" \
     --optimizer "$optimizer" \
     --lr "$lr" \

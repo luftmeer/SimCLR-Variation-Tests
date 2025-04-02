@@ -62,7 +62,7 @@ for ckpt_file in "$checkpoint_dir"/*.cpt; do
     # Check target folder
     target_folder="${checkpoint_dir}/cpt_epoch${epoch_num}"
     if [[ ! -d "$target_folder" ]]; then
-        echo "Submitting job for checkpoint: epoch ${epoch_num}"
+        echo "Submitting job for checkpoint: epoch ${epoch_num} (File: ${ckpt_file})"
 
         slurm_id=$(sbatch --parsable slurm/default_linear_evaluation.sh \
             --id "$job_id" \
