@@ -4,7 +4,7 @@ import huggingface_hub
 from simclr.transform import SimCLRTransform
 import os
 
-DATASETS = ['CIFAR10', 'STL10', 'Imagenette', 'tiny-imagenet']
+DATASETS = ['CIFAR10', 'STL10', 'Imagenette', 'tiny-imagenet', 'CIFAR100']
 
 def get_dataset(dataset_name: str='CIFAR10', train: bool=True, image_size: int=224, augmentations: int=4, eval:bool=False, **kwargs):
     transform = SimCLRTransform(size=image_size, n=augmentations, eval=eval)
@@ -12,6 +12,13 @@ def get_dataset(dataset_name: str='CIFAR10', train: bool=True, image_size: int=2
     assert dataset_name in DATASETS
     if dataset_name == 'CIFAR10':
         ds = torchvision.datasets.CIFAR10(
+            root=root_dir,
+            train=train,
+            transform=transform,
+            download=True,
+        )
+    elif dataset_name == 'CIFAR100':
+        ds = torchvision.datasets.CIFAR100(
             root=root_dir,
             train=train,
             transform=transform,
