@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 #SBATCH --job-name=linear-eval
 #SBATCH -o ./runs/%j/%x.%j.out
 #SBATCH -e ./runs/%j/%x.%j.err
@@ -44,7 +44,7 @@ if [[ -z "$job_id" || -z "$checkpoint" ]]; then
 fi
 
 # --- Defaults ---
-config="${./config/linear_evaluation_default.yaml}"
+config="${config:-config/linear_evaluation_default.yaml}"
 batch_size="${batch_size:-256}"
 optimizer="${optimizer:-SGD}"
 lr="${lr:-0.01}"
