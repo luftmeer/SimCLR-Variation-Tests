@@ -5,7 +5,6 @@
 #SBATCH -D ./
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
-#SBATCH --gpus=1
 #SBATCH --partition=NvidiaAll
 # Notification and type
 #SBATCH --mail-type=NONE
