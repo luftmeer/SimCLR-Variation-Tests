@@ -146,7 +146,7 @@ def main(args):
         print(f"[Epoch {epoch+1}] Loss: {loss_epoch} | Accuracy: {accuracy_epoch} | Top-1: {top1} | Top-5: {top5} | Learning Rate: {optimizer.param_groups[0]['lr']}")
         
         # General save after n-epochs
-        if (epoch+1) %args.save_every_epoch_le == 0:
+        if (epoch+1) %args.save_every_epoch == 0:
             save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, base_folder='runs')
         
         # Current best model save point

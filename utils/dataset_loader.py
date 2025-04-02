@@ -29,7 +29,7 @@ def get_dataset(dataset_name: str='CIFAR10', train: bool=True, image_size: int=2
     elif dataset_name == 'Imagenette':
         ds = torchvision.datasets.Imagenette(
             root=root_dir,
-            split='train',
+            split='train' if train else 'val',
             size='full',
             transform=transform,
             download=True,
