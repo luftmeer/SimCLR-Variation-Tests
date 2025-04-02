@@ -7,7 +7,7 @@ import argparse
 CHECKPOINTS_FOLDER = 'checkpoints'
 EVAL_CPT_FOLDER = 'linear_evaluation'
 
-def load_model(path:str, device:torch.device, eval:bool=False) -> torch.nn:
+def load_model(path:str, device:torch.device, eval:bool=False, args_only:bool=False) -> torch.nn:
     if not os.path.exists(path):
         raise FileNotFoundError("File or Path not correct")
 
@@ -15,6 +15,9 @@ def load_model(path:str, device:torch.device, eval:bool=False) -> torch.nn:
     
     if eval:
         return cpt['model_state_dict'], cpt['epoch']
+    
+    if args_only:
+        return cpt['args']
     
     return cpt
 

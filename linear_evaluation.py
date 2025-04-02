@@ -99,6 +99,12 @@ def main(args):
     # Device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
+    # Pre-Load old args
+    old_args = load_model(args.checkpoint, device, args_only=True)
+    args.encoder = old_args.encoder
+    args.widening = old_args.widening
+    
+    
     # Dataset retrieval
     train_dataset = get_dataset(dataset_name=args.dataset_name, train=True, image_size=args.resize, HF_TOKEN=args.HF_TOKEN, eval=True, args=args)
     test_dataset = get_dataset(dataset_name=args.dataset_name, train=False, image_size=args.resize, HF_TOKEN=args.HF_TOKEN, eval=True, args=args)
