@@ -10,7 +10,6 @@ import torch
 import zipfile
 from sklearn.manifold import TSNE
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-from torch.utils.tensorboard import SummaryWriter
 from PIL import Image
 
 
@@ -185,7 +184,7 @@ class LinearEvaluationMonitor:
             self.log_model_weights(model, epoch)
             self.detect_anomalies(model, epoch)
 
-        if features is not None and labels is not None and (epoch == 0 or epoch+1 % 10 == 0 or epoch+1==101):
+        if features is not None and labels is not None and (epoch == 0 or (epoch+1) % 10 == 0 or (epoch+1)==101):
             self.tb_writer.add_embedding(features, metadata=labels, tag=f"embeddings/epoch_{epoch}")
 
         if per_class_acc is not None:
@@ -242,10 +241,10 @@ class LinearEvaluationMonitor:
             raise ValueError("Provide either y_true and y_pred or cm_tensor")
 
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.class_names)
-        fig, ax = plt.subplots(figsize=(8, 8))
+        fig, ax = plt.subplots(figsize=(16, 16))
         disp.plot(ax=ax, cmap='Blues', xticks_rotation=45)
         plt.title(f"Confusion Matrix (Epoch {epoch})")
-        plt.tight_layout()
+        #plt.tight_layout()
         cm_path = os.path.join(self.save_dir, f"confusion_matrix_epoch_{epoch}.png")
         plt.savefig(cm_path)
         plt.close()
