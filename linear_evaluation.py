@@ -203,7 +203,7 @@ def main(args):
                             features=features, 
                             labels=labels,
                             prefix='val')
-            monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch)
+            monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch, prefix='val')
             
             for param in model.parameters():
                 param.requires_grad = True
@@ -228,7 +228,7 @@ def main(args):
                             features=features, 
                             labels=labels,
                             prefix='val')
-    monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch)
+    monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch, prefix='val')
     
     # Save Evaluation
     print("Save final model", flush=True)
