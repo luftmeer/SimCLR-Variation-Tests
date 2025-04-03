@@ -55,7 +55,6 @@ def log_evaluation(epoch: int, loss, accuracy, args: argparse.Namespace, elapsed
             'epoch': epoch+1,
             'loss': float(loss),
             'accuracy': accuracy,
-            'top1': top1,
             'top5': top5,
             'host': socket.gethostname(),
             'elapsed_time': elapsed_time,
