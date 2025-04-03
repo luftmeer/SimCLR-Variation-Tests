@@ -6,7 +6,6 @@ from torch.utils.tensorboard import SummaryWriter
 import warnings
 import time
 import yaml
-import threading
 import torch
 import zipfile
 from sklearn.manifold import TSNE
@@ -192,7 +191,7 @@ class LinearEvaluationMonitor:
         if per_class_acc is not None:
             for idx, acc in enumerate(per_class_acc):
                 label = self.class_names[idx] if self.class_names else str(idx)
-                self.data[f"acc_{label}"].append(acc)
+                self.data[f"acc_{label}"].append(acc.item())
                 self.tb_writer.add_scalar(f"PerClassAccuracy/{label}", acc, epoch)
                 
         self.tb_writer.add_scalar('Accuracy/Top1', top1, epoch)
@@ -214,12 +213,8 @@ class LinearEvaluationMonitor:
     def _save_csv(self):
         df = pd.DataFrame(self.data)
         df.to_csv(os.path.join(self.save_dir, "linear_eval_metrics.csv"), index=False)
-
+        
     def log_tsne_async(self, features, labels, epoch):
-        thread = threading.Thread(target=self._compute_and_plot_tsne, args=(features, labels, epoch))
-        thread.start()
-
-    def _compute_and_plot_tsne(self, features, labels, epoch):
         print("[t-SNE] Computing 2D projection...", flush=True)
         tsne = TSNE(n_components=2, init='pca', random_state=42)
         reduced = tsne.fit_transform(features.cpu().numpy())
