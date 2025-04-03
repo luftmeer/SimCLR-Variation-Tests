@@ -88,5 +88,5 @@ python linear_evaluation.py \
     --seed "$seed" \
     --save_every_epoch "$save_every_epoch" \
     --ga_count "$ga_count" \
-    --eval-every "$eval_every" \
+    --eval_every "$eval_every" \
     $ga_flag
