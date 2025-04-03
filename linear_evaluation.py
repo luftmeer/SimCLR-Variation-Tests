@@ -48,12 +48,12 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         optimizer.step()
         
         if step % 50 == 0:
-            print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute()} | Top-5: {top5.compute()} | Learning Rate: {optimizer.param_groups[0]['lr']}")
+            print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()} | Learning Rate: {optimizer.param_groups[0]['lr']}")
     
     features = torch.cat(all_features)
     labels = torch.cat(all_labels)
     
-    return loss_epoch / len(train_loader), top1.compute(), top5.compute(), cm.compute(), acc_per_class.compute(), features, labels
+    return loss_epoch / len(train_loader), top1.compute().item(), top5.compute().item(), cm.compute(), acc_per_class.compute(), features, labels
 
 def test(simclr_model, model, criterion, test_loader, device, args):
     top1 = MulticlassAccuracy(num_classes=args.n_classes)
@@ -85,12 +85,12 @@ def test(simclr_model, model, criterion, test_loader, device, args):
         loss_epoch += loss.item()
         
         if step % 25 == 0:
-            print(f"Step [{step}/{len(test_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute()} | Top-5: {top5.compute()}")
+            print(f"Step [{step}/{len(test_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()}")
     
     features = torch.cat(all_features)
     labels = torch.cat(all_labels)
     
-    return loss_epoch / len(test_loader), top1.compute(), top5.compute(), cm.compute(), acc_per_class.compute(), features, labels
+    return loss_epoch / len(test_loader), top1.compute().item(), top5.compute().item(), cm.compute(), acc_per_class.compute(), features, labels
         
 
 def main(args):
