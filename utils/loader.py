@@ -14,7 +14,7 @@ def load_model(path:str, device, eval:bool=False, args_only:bool=False) -> torch
     if isinstance(device, torch.device):
         cpt = torch.load(path, map_location=device.type, weights_only=False)
     elif isinstance(device, str):
-        cpt = torch.load(path, map_location=f"cuda:{device}", weights_only=False)
+        cpt = torch.load(path, map_location=device, weights_only=False)
     
     if eval:
         return cpt['model_state_dict'], cpt['epoch']
