@@ -174,6 +174,7 @@ class LinearEvaluationMonitor:
         self.data['lr'].append(lr)
         self.data['eval_time'].append(eval_time)
         self.data['timestamp'].append(time.strftime('%Y-%m-%d_%H-%M-%S'))
+        self.data['method'].append(prefix)
 
         if model is not None:
             frozen = sum(p.numel() for p in model.parameters() if not p.requires_grad)
@@ -186,7 +187,7 @@ class LinearEvaluationMonitor:
             self.log_model_weights(model, epoch)
             self.detect_anomalies(model, epoch)
 
-        if features is not None and labels is not None and (epoch == 0 or (epoch+1) % 10 == 0 or (epoch+1)==101) and len(prefix) == 0:
+        if features is not None and labels is not None and (epoch == 0 or (epoch+1) % 10 == 0 or (epoch+1)==101) and prefix == 'train':
             metadata = [", ".join(self.class_names[l.item()]) if isinstance(self.class_names[l.item()], tuple) else str(self.class_names[l.item()]) for l in labels]
             self.tb_writer.add_embedding(features, metadata=metadata, tag=f"embeddings/epoch_{epoch}")
 
@@ -202,21 +203,22 @@ class LinearEvaluationMonitor:
         self.tb_writer.add_scalar(tag('LearningRate'), lr, epoch)
         self.tb_writer.add_scalar(tag('EvalTime'), eval_time, epoch)
 
-        self.log_tsne_async(features, labels, epoch)
-        self._save_yaml(epoch)
+        self.log_tsne(features, labels, epoch, prefix)
+        self._save_yaml(epoch, prefix)
         self._save_csv()
-        self.summarize_all_epochs()
+        self.summarize_all_epochs(prefix)
 
-    def _save_yaml(self, epoch):
-        yaml_path = os.path.join(self.save_dir, f"eval_epoch_{epoch}.yaml")
+    def _save_yaml(self, epoch, prefix=""):
+        tag = lambda name: f"{prefix}_{name}" if prefix else name
+        yaml_path = os.path.join(self.save_dir, f"eval_{tag(f'epoch_{epoch}')}.yaml")
         with open(yaml_path, 'w') as f:
-            yaml.dump({k: v[-1] for k, v in self.data.items()}, f)
+            yaml.dump({k: v[-1] for k, v in self.data.items() if tag("") in k}, f)
 
     def _save_csv(self):
         df = pd.DataFrame(self.data)
         df.to_csv(os.path.join(self.save_dir, "linear_eval_metrics.csv"), index=False)
         
-    def log_tsne_async(self, features, labels, epoch):
+    def log_tsne(self, features, labels, epoch, prefix="train"):
         print("[t-SNE] Computing 2D projection...", flush=True)
         tsne = TSNE(n_components=2, init='pca', random_state=42)
         reduced = tsne.fit_transform(features.cpu().numpy())
@@ -229,12 +231,13 @@ class LinearEvaluationMonitor:
 
         plt.title(f"t-SNE projection (Epoch {epoch})")
         plt.tight_layout()
-        tsne_path = os.path.join(self.save_dir, f"tsne_epoch_{epoch}.png")
+        tsne_path = os.path.join(self.save_dir, f"{prefix}_tsne_epoch_{epoch}.png" if prefix else f"tsne_epoch_{epoch}.png")
         plt.savefig(tsne_path)
         plt.close()
         print(f"[t-SNE] Saved to {tsne_path}", flush=True)
 
-    def log_confusion_matrix(self, y_true=None, y_pred=None, cm_tensor=None, epoch=0):
+    def log_confusion_matrix(self, y_true=None, y_pred=None, cm_tensor=None, epoch=0, prefix: str='train'):
+        tag = lambda name: f"{prefix}_{name}" if prefix else name
         print("[Confusion Matrix] Generating plot...", flush=True)
         if cm_tensor is not None:
             cm = cm_tensor.cpu().numpy()
@@ -248,21 +251,22 @@ class LinearEvaluationMonitor:
         disp.plot(ax=ax, cmap='Blues', xticks_rotation=45)
         plt.title(f"Confusion Matrix (Epoch {epoch})")
         #plt.tight_layout()
-        cm_path = os.path.join(self.save_dir, f"confusion_matrix_epoch_{epoch}.png")
+        cm_path = os.path.join(self.save_dir, tag(f"confusion_matrix_epoch_{epoch}.png"))
         plt.savefig(cm_path)
         plt.close()
         print(f"[Confusion Matrix] Saved to {cm_path}", flush=True)
 
-    def summarize_all_epochs(self):
+    def summarize_all_epochs(self, prefix: str='train'):
         csv_path = os.path.join(self.save_dir, "linear_eval_metrics.csv")
         if os.path.exists(csv_path):
-            df = pd.read_csv(csv_path)
+            full_df = pd.read_csv(csv_path)
+            df = full_df[full_df['method']==prefix]
             df['top1'] = df['top1'].astype(float)
             df['top5'] = df['top5'].astype(float)
             summary_path = os.path.join(self.save_dir, "summary_report.txt")
             with open(summary_path, 'w') as f:
-                f.write("Linear Evaluation Summary Report\n")
-                f.write("===============================\n")
+                f.write(f"Linear Evaluation Summary Report ({prefix})\n")
+                f.write("============================================\n")
                 f.write(f"Total Epochs: {len(df)}\n")
                 f.write(f"Best Top-1 Accuracy: {df['top1'].max():.2f}% at Epoch {df.loc[df['top1'].idxmax(), 'epoch']}\n")
                 f.write(f"Best Top-5 Accuracy: {df['top5'].max():.2f}% at Epoch {df.loc[df['top5'].idxmax(), 'epoch']}\n")
@@ -281,7 +285,7 @@ class LinearEvaluationMonitor:
             ax.legend()
             plt.grid(True)
             plt.tight_layout()
-            acc_plot_path = os.path.join(self.save_dir, "accuracy_over_epochs.png")
+            acc_plot_path = os.path.join(self.save_dir, f"{prefix}_accuracy_over_epochs.png")
             plt.savefig(acc_plot_path)
             plt.close()
             print(f"[Summary] Accuracy plot saved to {acc_plot_path}", flush=True)
@@ -295,7 +299,7 @@ class LinearEvaluationMonitor:
                 plt.title('Loss Over Epochs')
                 plt.grid(True)
                 plt.tight_layout()
-                loss_plot_path = os.path.join(self.save_dir, "loss_over_epochs.png")
+                loss_plot_path = os.path.join(self.save_dir, f"{prefix}_loss_over_epochs.png")
                 plt.savefig(loss_plot_path)
                 plt.close()
                 print(f"[Summary] Loss curve saved to {loss_plot_path}", flush=True)
@@ -312,13 +316,13 @@ class LinearEvaluationMonitor:
                 plt.xlabel('Epoch')
                 plt.title('Per-Class Accuracy Heatmap')
                 plt.tight_layout()
-                heatmap_path = os.path.join(self.save_dir, "per_class_accuracy_heatmap.png")
+                heatmap_path = os.path.join(self.save_dir, f"{prefix}_per_class_accuracy_heatmap.png")
                 plt.savefig(heatmap_path)
                 plt.close()
                 print(f"[Summary] Per-class accuracy heatmap saved to {heatmap_path}", flush=True)
 
             # Create archive
-            zip_path = os.path.join(self.save_dir, "linear_eval_logs.zip")
+            zip_path = os.path.join(self.save_dir, f"{prefix}_linear_eval_logs.zip")
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for root, _, files in os.walk(self.save_dir):
                     for file in files:
