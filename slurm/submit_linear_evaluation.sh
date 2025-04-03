@@ -29,7 +29,7 @@ if [[ -z "$job_id" ]]; then
 fi
 
 # --- Defaults ---
-config="${./config/linear_evaluation_default.yaml}"
+config="${config:-config/linear_evaluation_default.yaml}"
 batch_size="${batch_size:-256}"
 optimizer="${optimizer:-SGD}"
 lr="${lr:-0.01}"
