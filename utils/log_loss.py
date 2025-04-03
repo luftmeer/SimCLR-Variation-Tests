@@ -48,11 +48,12 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
             writer.writerow(row)
 
 
-def log_evaluation(epoch: int, loss, accuracy, args: argparse.Namespace, elapsed_time: float, cpt_epoch: int, top5, base_folder: str=None):
+def log_evaluation(epoch: int, loss, accuracy, args: argparse.Namespace, elapsed_time: float, cpt_epoch: int, top5, base_folder: str=None, method: str='train'):
     log_file = f"{'_'.join(str(elem) for elem in ['linear-evaluation', args.dataset_name, args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature, f"cpt_epoch{cpt_epoch}"])}.csv"
     
     row = {
             'epoch': epoch+1,
+            'method': method,
             'loss': float(loss),
             'accuracy': accuracy,
             'top5': top5,

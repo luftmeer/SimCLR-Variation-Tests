@@ -17,6 +17,7 @@ while [[ "$#" -gt 0 ]]; do
         --save-every-epoch) save_every_epoch="$2"; shift ;;
         --gradient-accumulation) ga_flag="--gradient--accumulation"; shift ;;
         --ga-count) ga_count="$2"; shift ;;
+        --eval-every) eval_every="$2"; shift ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
     shift
@@ -39,6 +40,7 @@ n_classes="${n_classes:-10}"
 seed="${seed:-42}"
 save_every_epoch="${save_every_epoch:-10}"
 ga_count="${ga_count:-8}"
+eval_every="${eval_every:-5}"
 
 # --- Paths ---
 checkpoint_dir="./runs/${job_id}/checkpoints"
@@ -76,6 +78,7 @@ for ckpt_file in "$checkpoint_dir"/*.cpt; do
             --seed "$seed" \
             --save-every-epoch "$save_every_epoch" \
             --ga-count "$ga_count" \
+            --eval-every "$eval_every" \
             $ga_flag
         )
         mkdir -p "./runs/$slurm_id"

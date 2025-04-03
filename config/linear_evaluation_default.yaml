@@ -36,3 +36,6 @@
 # Gradient accumulation
 - ga: False
 - ga_count: 8
+
+# Evaluation during Training
+- eval_every: 5

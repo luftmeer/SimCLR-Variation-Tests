@@ -132,7 +132,6 @@ def main(args):
     # Classifier 
     model = nn.Linear(n_features, args.n_classes)
     model = model.to(device)
-    model.train()
     
     # Optimizer & Criterion
     if args.optimizer == 'Adam':
@@ -148,6 +147,7 @@ def main(args):
     # Train
     best_accuracy = 0.
     for epoch in range(args.epochs):
+        model.train()
         print(f'Epoch {epoch+1} of {args.epochs}', flush=True)
         start = time.time()
         loss_epoch, top1, top5, cm, acc_per_class, features, labels = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
@@ -166,7 +166,7 @@ def main(args):
             save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, best_model=True, base_folder='runs')
             best_accuracy = top1
         
-        log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs')
+        log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs', method='train')
         print(f'Execute Monitor Logging', flush=True)
         monitor.log_metrics(epoch=epoch, 
                             top1=top1, 
@@ -182,13 +182,26 @@ def main(args):
         
         scheduler.step()
         
+        # Evaluate
+        if (epoch+1) % args.eval_every == 0:
+            model.eval()
+            for param in model.parameters():
+                param.requires_grad = False
+            start = time.time()
+            loss_epoch, top1, top5, cm, acc_per_class, features, labels = test(simclr_model, model, criterion, test_loader, device, args)
+            end = time.time()
+            log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs', method='evaluate')
+            
+            for param in model.parameters():
+                param.requires_grad = True
+        
     # Evaluate
     start = time.time()
     loss_epoch, top1, top5, cm, acc_per_class, features, labels = test(simclr_model, model, criterion, test_loader, device, args)
     end = time.time()
     
     print(f"[EVAL]\t Loss: {loss_epoch} | Top-1: {top1} | Top-5: {top5}", flush=True)        
-    log_evaluation(epoch=epoch+1, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs')
+    log_evaluation(epoch=epoch+1, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs', method='final')
     monitor.log_metrics(epoch=epoch+1, 
                             top1=top1, 
                             top5=top5, 

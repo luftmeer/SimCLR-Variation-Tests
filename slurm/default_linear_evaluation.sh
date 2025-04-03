@@ -32,6 +32,7 @@ while [[ "$#" -gt 0 ]]; do
         --save-every-epoch) save_every_epoch="$2"; shift ;;
         --gradient-accumulation) ga_flag="--ga"; shift ;;
         --ga-count) ga_count="$2"; shift ;;
+        --eval-every) eval_every="$2"; shift ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
     shift
@@ -54,6 +55,7 @@ n_classes="${n_classes:-10}"
 seed="${seed:-42}"
 save_every_epoch="${save_every_epoch:-10}"
 ga_count="${ga_count:-8}"
+eval_every="${eval_every:-5}"
 
 # --- Log info ---
 echo "======== SIMCLR LINEAR EVALUATION ========"
@@ -86,4 +88,5 @@ python linear_evaluation.py \
     --seed "$seed" \
     --save_every_epoch "$save_every_epoch" \
     --ga_count "$ga_count" \
+    --eval-every "$eval_every" \
     $ga_flag
