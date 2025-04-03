@@ -146,6 +146,7 @@ def main(args):
     # Train
     best_accuracy = 0.
     for epoch in range(args.epochs):
+        print(f'Epoch {epoch+1} of {args.epochs}')
         start = time.time()
         loss_epoch, top1, top5, cm, acc_per_class, features, labels = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         end = time.time()
@@ -154,14 +155,17 @@ def main(args):
         
         # General save after n-epochs
         if (epoch+1) %args.save_every_epoch == 0:
+            print(f"Save model at epoch {epoch+1}")
             save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, base_folder='runs')
         
         # Current best model save point
         if top1 > best_accuracy:
+            print(f'Save new best model at epoch {epoch+1} with top-1 accuracy of {top1}')
             save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, best_model=True, base_folder='runs')
             best_accuracy = top1
         
         log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs')
+        print(f'Execute Monitor Logging')
         monitor.log_metrics(epoch=epoch, 
                             top1=top1, 
                             top5=top5, 
