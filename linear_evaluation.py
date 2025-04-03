@@ -190,7 +190,7 @@ def main(args):
             start = time.time()
             loss_epoch, top1, top5, cm, acc_per_class, features, labels = test(simclr_model, model, criterion, test_loader, device, args)
             end = time.time()
-            log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs', method='evaluate')
+            log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs', method='val')
             
             monitor.log_metrics(epoch=epoch, 
                             top1=top1, 
@@ -227,7 +227,7 @@ def main(args):
                             model=model, 
                             features=features, 
                             labels=labels,
-                            prefix='Val')
+                            prefix='val')
     monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch)
     
     # Save Evaluation
