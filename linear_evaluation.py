@@ -202,7 +202,7 @@ def main(args):
                             model=model, 
                             features=features, 
                             labels=labels,
-                            prefix='Val')
+                            prefix='val')
             monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch)
             
             for param in model.parameters():
