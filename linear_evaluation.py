@@ -32,10 +32,10 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         with torch.no_grad():
             h, _ = simclr_model([img])
         
-        all_features.append(h.cpu())
+        all_features.append(h[0].cpu())
         all_labels.append(target.cpu())
         
-        out = model(h)
+        out = model(h[0])
         loss = criterion(out, target)
         
         top1.update(out, target)
@@ -69,10 +69,10 @@ def test(simclr_model, model, criterion, test_loader, device, args):
         
         h, _ = simclr_model([img])
         
-        all_features.append(h.cpu())
+        all_features.append(h[0].cpu())
         all_labels.append(target.cpu())
         
-        out = model(h)
+        out = model(h[0])
         loss = criterion(out, target)
         
         top1.update(out, target)
