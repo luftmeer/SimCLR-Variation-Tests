@@ -156,7 +156,7 @@ def main(args):
             save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, best_model=True, base_folder='runs')
             best_accuracy = top1
         
-        log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top1=top1, top5=top5)
+        log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs')
         monitor.log_metrics(epoch=epoch, 
                             top1=top1, 
                             top5=top5, 
@@ -177,7 +177,7 @@ def main(args):
     end = time.time()
     
     print(f"[EVAL]\t Loss: {loss_epoch} | Top-1: {top1} | Top-5: {top5}")        
-    log_evaluation(epoch=epoch+1, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch)
+    log_evaluation(epoch=epoch+1, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs')
     monitor.log_metrics(epoch=epoch+1, 
                             top1=top1, 
                             top5=top5, 
