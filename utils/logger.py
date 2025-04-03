@@ -164,7 +164,7 @@ class LinearEvaluationMonitor:
         if not nan_found:
             self.tb_writer.add_text("Anomaly", "No NaNs detected in gradients", epoch)
 
-    def log_metrics(self, epoch, top1, top5, loss, lr, eval_time, per_class_acc, model=None, features=None, labels=None, prefix=""):
+    def log_metrics(self, epoch, top1, top5, loss, lr, eval_time, per_class_acc, model=None, features=None, labels=None, prefix: str="train"):
         tag = lambda name: f"{prefix}/{name}" if prefix else name
 
         self.data['epoch'].append(epoch)
