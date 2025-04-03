@@ -144,7 +144,7 @@ def main(args):
     
     # Train
     best_accuracy = 0.
-    for epoch in range(args.epochs_le):
+    for epoch in range(args.epochs):
         start = time.time()
         loss_epoch, accuracy_epoch, top1, top5, cm, acc_per_class, features, labels = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         end = time.time()
