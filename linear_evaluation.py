@@ -50,6 +50,7 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         if step % 50 == 0:
             print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()} | Learning Rate: {optimizer.param_groups[0]['lr']}")
     
+    print(f"Step [{step}/{len(train_loader)}]\t Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()} | Learning Rate: {optimizer.param_groups[0]['lr']}")
     features = torch.cat(all_features)
     labels = torch.cat(all_labels)
     
@@ -87,6 +88,7 @@ def test(simclr_model, model, criterion, test_loader, device, args):
         if step % 25 == 0:
             print(f"Step [{step}/{len(test_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()}")
     
+    print(f"Step [{step}/{len(test_loader)}]\t | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()}")
     features = torch.cat(all_features)
     labels = torch.cat(all_labels)
     
