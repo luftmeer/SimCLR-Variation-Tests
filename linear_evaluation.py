@@ -48,9 +48,9 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         optimizer.step()
         
         if step % 50 == 0:
-            print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()} | Learning Rate: {optimizer.param_groups[0]['lr']}")
+            print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()} | Learning Rate: {optimizer.param_groups[0]['lr']}", flush=True)
     
-    print(f"Step [{step}/{len(train_loader)}]\t Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()} | Learning Rate: {optimizer.param_groups[0]['lr']}")
+    print(f"Step [{step}/{len(train_loader)}]\t Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()} | Learning Rate: {optimizer.param_groups[0]['lr']}", flush=True)
     features = torch.cat(all_features)
     labels = torch.cat(all_labels)
     
@@ -86,9 +86,9 @@ def test(simclr_model, model, criterion, test_loader, device, args):
         loss_epoch += loss.item()
         
         if step % 25 == 0:
-            print(f"Step [{step}/{len(test_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()}")
+            print(f"Step [{step}/{len(test_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()}", flush=True)
     
-    print(f"Step [{step}/{len(test_loader)}]\t | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()}")
+    print(f"Step [{step}/{len(test_loader)}]\t | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()}", flush=True)
     features = torch.cat(all_features)
     labels = torch.cat(all_labels)
     
@@ -148,7 +148,7 @@ def main(args):
     # Train
     best_accuracy = 0.
     for epoch in range(args.epochs):
-        print(f'Epoch {epoch+1} of {args.epochs}')
+        print(f'Epoch {epoch+1} of {args.epochs}', flush=True)
         start = time.time()
         loss_epoch, top1, top5, cm, acc_per_class, features, labels = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         end = time.time()
@@ -157,17 +157,17 @@ def main(args):
         
         # General save after n-epochs
         if (epoch+1) %args.save_every_epoch == 0:
-            print(f"Save model at epoch {epoch+1}")
+            print(f"Save model at epoch {epoch+1}", flush=True)
             save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, base_folder='runs')
         
         # Current best model save point
         if top1 > best_accuracy:
-            print(f'Save new best model at epoch {epoch+1} with top-1 accuracy of {top1}')
+            print(f'Save new best model at epoch {epoch+1} with top-1 accuracy of {top1}', flush=True)
             save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, best_model=True, base_folder='runs')
             best_accuracy = top1
         
         log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs')
-        print(f'Execute Monitor Logging')
+        print(f'Execute Monitor Logging', flush=True)
         monitor.log_metrics(epoch=epoch, 
                             top1=top1, 
                             top5=top5, 
@@ -187,7 +187,7 @@ def main(args):
     loss_epoch, top1, top5, cm, acc_per_class, features, labels = test(simclr_model, model, criterion, test_loader, device, args)
     end = time.time()
     
-    print(f"[EVAL]\t Loss: {loss_epoch} | Top-1: {top1} | Top-5: {top5}")        
+    print(f"[EVAL]\t Loss: {loss_epoch} | Top-1: {top1} | Top-5: {top5}", flush=True)        
     log_evaluation(epoch=epoch+1, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs')
     monitor.log_metrics(epoch=epoch+1, 
                             top1=top1, 
@@ -202,10 +202,10 @@ def main(args):
     monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch)
     
     # Save Evaluation
-    print("Save final model")
+    print("Save final model", flush=True)
     save_evaluation(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch+1, base_folder='runs')
     
-    return print("Finished...")
+    return print("Finished...", flush=True)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

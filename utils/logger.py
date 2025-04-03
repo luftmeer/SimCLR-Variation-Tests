@@ -220,7 +220,7 @@ class LinearEvaluationMonitor:
         thread.start()
 
     def _compute_and_plot_tsne(self, features, labels, epoch):
-        print("[t-SNE] Computing 2D projection...")
+        print("[t-SNE] Computing 2D projection...", flush=True)
         tsne = TSNE(n_components=2, init='pca', random_state=42)
         reduced = tsne.fit_transform(features.cpu().numpy())
 
@@ -235,10 +235,10 @@ class LinearEvaluationMonitor:
         tsne_path = os.path.join(self.save_dir, f"tsne_epoch_{epoch}.png")
         plt.savefig(tsne_path)
         plt.close()
-        print(f"[t-SNE] Saved to {tsne_path}")
+        print(f"[t-SNE] Saved to {tsne_path}", flush=True)
 
     def log_confusion_matrix(self, y_true=None, y_pred=None, cm_tensor=None, epoch=0):
-        print("[Confusion Matrix] Generating plot...")
+        print("[Confusion Matrix] Generating plot...", flush=True)
         if cm_tensor is not None:
             cm = cm_tensor.cpu().numpy()
         elif y_true is not None and y_pred is not None:
@@ -254,7 +254,7 @@ class LinearEvaluationMonitor:
         cm_path = os.path.join(self.save_dir, f"confusion_matrix_epoch_{epoch}.png")
         plt.savefig(cm_path)
         plt.close()
-        print(f"[Confusion Matrix] Saved to {cm_path}")
+        print(f"[Confusion Matrix] Saved to {cm_path}", flush=True)
 
     def summarize_all_epochs(self):
         csv_path = os.path.join(self.save_dir, "linear_eval_metrics.csv")
@@ -287,7 +287,7 @@ class LinearEvaluationMonitor:
             acc_plot_path = os.path.join(self.save_dir, "accuracy_over_epochs.png")
             plt.savefig(acc_plot_path)
             plt.close()
-            print(f"[Summary] Accuracy plot saved to {acc_plot_path}")
+            print(f"[Summary] Accuracy plot saved to {acc_plot_path}", flush=True)
 
             # Loss curve
             if 'loss' in df:
@@ -301,7 +301,7 @@ class LinearEvaluationMonitor:
                 loss_plot_path = os.path.join(self.save_dir, "loss_over_epochs.png")
                 plt.savefig(loss_plot_path)
                 plt.close()
-                print(f"[Summary] Loss curve saved to {loss_plot_path}")
+                print(f"[Summary] Loss curve saved to {loss_plot_path}", flush=True)
 
             # Per-class accuracy heatmap
             acc_cols = [col for col in df.columns if col.startswith('acc_')]
@@ -318,7 +318,7 @@ class LinearEvaluationMonitor:
                 heatmap_path = os.path.join(self.save_dir, "per_class_accuracy_heatmap.png")
                 plt.savefig(heatmap_path)
                 plt.close()
-                print(f"[Summary] Per-class accuracy heatmap saved to {heatmap_path}")
+                print(f"[Summary] Per-class accuracy heatmap saved to {heatmap_path}", flush=True)
 
             # Create archive
             zip_path = os.path.join(self.save_dir, "linear_eval_logs.zip")
@@ -329,6 +329,6 @@ class LinearEvaluationMonitor:
                             full_path = os.path.join(root, file)
                             arcname = os.path.relpath(full_path, self.save_dir)
                             zipf.write(full_path, arcname)
-            print(f"[Summary] Logs archived at {zip_path}")
+            print(f"[Summary] Logs archived at {zip_path}", flush=True)
         else:
-            print("[Summary] No metrics CSV found to summarize.")
+            print("[Summary] No metrics CSV found to summarize.", flush=True)
