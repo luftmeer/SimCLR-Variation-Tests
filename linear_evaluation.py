@@ -37,7 +37,6 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         
         out = model(h[0])
         loss = criterion(out, target)
-        print(f'{out.shape=}\n{target.shape=}')
         
         top1.update(out, target)
         top5.update(out, target)
