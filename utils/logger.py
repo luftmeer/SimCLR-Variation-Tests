@@ -185,7 +185,8 @@ class LinearEvaluationMonitor:
             self.detect_anomalies(model, epoch)
 
         if features is not None and labels is not None and (epoch == 0 or (epoch+1) % 10 == 0 or (epoch+1)==101):
-            self.tb_writer.add_embedding(features, metadata=labels, tag=f"embeddings/epoch_{epoch}")
+            metadata = [", ".join(self.class_names[l.item()]) if isinstance(self.class_names[l.item()], tuple) else str(self.class_names[l.item()]) for l in labels]
+            self.tb_writer.add_embedding(features, metadata=metadata, tag=f"embeddings/epoch_{epoch}")
 
         if per_class_acc is not None:
             for idx, acc in enumerate(per_class_acc):
