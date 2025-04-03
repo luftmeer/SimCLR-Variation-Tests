@@ -17,8 +17,7 @@ from tqdm import tqdm
 import os
 
 def train(simclr_model, model, optimizer, criterion, train_loader, device, args):
-    accuracy_epoch = MulticlassAccuracy(num_classes=args.n_classes)
-    top1 = TopKMultilabelAccuracy(k=1)
+    top1 = MulticlassAccuracy(num_classes=args.n_classes)
     top5 = TopKMultilabelAccuracy(k=5)
     cm = MulticlassConfusionMatrix(num_classes=args.n_classes)
     acc_per_class = MulticlassAccuracy(average=None, num_classes=args.n_classes)
@@ -39,7 +38,6 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         out = model(h)
         loss = criterion(out, target)
         
-        accuracy_epoch.update(out, target)
         top1.update(out, target)
         top5.update(out, target)
         cm.update(out, target)
@@ -50,13 +48,12 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         optimizer.step()
         
         if step % 50 == 0:
-            print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Accuracy: {accuracy_epoch.compute()} | Top-1: {top1.compute()} | Top-5: {top5.compute} | Learning Rate: {optimizer.param_groups[0]['lr']}")
+            print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute()} | Top-5: {top5.compute} | Learning Rate: {optimizer.param_groups[0]['lr']}")
     
-    return loss_epoch / len(train_loader), accuracy_epoch.compute(), top1.compute(), top5.compute(), cm.compute(), acc_per_class.compute(), all_features, all_labels
+    return loss_epoch / len(train_loader), top1.compute(), top5.compute(), cm.compute(), acc_per_class.compute(), all_features, all_labels
 
 def test(simclr_model, model, criterion, test_loader, device, args):
-    accuracy_epoch = MulticlassAccuracy(num_classes=args.n_classes)
-    top1 = TopKMultilabelAccuracy(k=1)
+    top1 = MulticlassAccuracy(num_classes=args.n_classes)
     top5 = TopKMultilabelAccuracy(k=5)
     cm = MulticlassConfusionMatrix(num_classes=args.n_classes)
     acc_per_class = MulticlassAccuracy(average=None, num_classes=args.n_classes)
@@ -78,7 +75,6 @@ def test(simclr_model, model, criterion, test_loader, device, args):
         out = model(h)
         loss = criterion(out, target)
         
-        accuracy_epoch.update(out, target)
         top1.update(out, target)
         top5.update(out, target)
         cm.update(out, target)
@@ -86,10 +82,10 @@ def test(simclr_model, model, criterion, test_loader, device, args):
         loss_epoch += loss.item()
         
         if step % 25 == 0:
-            print(f"Step [{step}/{len(test_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Accuracy: {accuracy_epoch.compute()} | Top-1: {top1.compute()} | Top-5: {top5.compute}")
+            print(f"Step [{step}/{len(test_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute()} | Top-5: {top5.compute}")
     
         
-    return loss_epoch / len(test_loader), accuracy_epoch.compute(), top1.compute(), top5.compute(), cm.compute(), acc_per_class.compute(), all_features, all_labels
+    return loss_epoch / len(test_loader), top1.compute(), top5.compute(), cm.compute(), acc_per_class.compute(), all_features, all_labels
         
 
 def main(args):
@@ -146,21 +142,21 @@ def main(args):
     best_accuracy = 0.
     for epoch in range(args.epochs):
         start = time.time()
-        loss_epoch, accuracy_epoch, top1, top5, cm, acc_per_class, features, labels = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
+        loss_epoch, top1, top5, cm, acc_per_class, features, labels = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         end = time.time()
         
-        print(f"[Epoch {epoch+1}] Loss: {loss_epoch} | Accuracy: {accuracy_epoch} | Top-1: {top1} | Top-5: {top5} | Learning Rate: {optimizer.param_groups[0]['lr']}")
+        print(f"[Epoch {epoch+1}] Loss: {loss_epoch} | Top-1: {top1} | Top-5: {top5} | Learning Rate: {optimizer.param_groups[0]['lr']}")
         
         # General save after n-epochs
         if (epoch+1) %args.save_every_epoch == 0:
             save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, base_folder='runs')
         
         # Current best model save point
-        if accuracy_epoch > best_accuracy:
+        if top1 > best_accuracy:
             save_model_eval(simclr_model=simclr_model, model=model, args=args, cpt_epoch=cpt_epoch, epoch=epoch, optimizer=optimizer, best_model=True, base_folder='runs')
-            best_accuracy = accuracy_epoch
+            best_accuracy = top1
         
-        log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=accuracy_epoch, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top1=top1, top5=top5)
+        log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top1=top1, top5=top5)
         monitor.log_metrics(epoch=epoch, 
                             top1=top1, 
                             top5=top5, 
@@ -177,11 +173,11 @@ def main(args):
         
     # Evaluate
     start = time.time()
-    loss_epoch, accuracy_epoch, top1, top5, cm, acc_per_class, features, labels = test(simclr_model, model, criterion, test_loader, device, args)
+    loss_epoch, top1, top5, cm, acc_per_class, features, labels = test(simclr_model, model, criterion, test_loader, device, args)
     end = time.time()
     
-    print(f"[EVAL]\t Loss: {loss_epoch} | Accuracy: {accuracy_epoch}  | Top-1: {top1} | Top-5: {top5}")        
-    log_evaluation(epoch=epoch+1, loss=loss_epoch, accuracy=accuracy_epoch, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch)
+    print(f"[EVAL]\t Loss: {loss_epoch} | Top-1: {top1} | Top-5: {top5}")        
+    log_evaluation(epoch=epoch+1, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch)
     monitor.log_metrics(epoch=epoch+1, 
                             top1=top1, 
                             top5=top5, 
