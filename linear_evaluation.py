@@ -8,7 +8,7 @@ from utils.dataset_loader import get_dataset
 from models.encoder import get_encoder
 from simclr.simclr import SimCLR
 from utils.loader import load_model, save_evaluation, save_model_eval
-from torcheval.metrics import MulticlassAccuracy, TopKMultilabelAccuracy, MulticlassConfusionMatrix
+from torcheval.metrics import MulticlassAccuracy, MulticlassConfusionMatrix
 from utils.log_loss import log_evaluation
 import time
 from utils.logger import LinearEvaluationMonitor
@@ -18,7 +18,7 @@ import os
 
 def train(simclr_model, model, optimizer, criterion, train_loader, device, args):
     top1 = MulticlassAccuracy(num_classes=args.n_classes)
-    top5 = TopKMultilabelAccuracy(k=5)
+    top5 = MulticlassAccuracy(k=5)
     cm = MulticlassConfusionMatrix(num_classes=args.n_classes)
     acc_per_class = MulticlassAccuracy(average=None, num_classes=args.n_classes)
     all_features = []
@@ -37,6 +37,7 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         
         out = model(h[0])
         loss = criterion(out, target)
+        print(f'{out.shape=}\n{target.shape=}')
         
         top1.update(out, target)
         top5.update(out, target)
@@ -48,13 +49,13 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         optimizer.step()
         
         if step % 50 == 0:
-            print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute()} | Top-5: {top5.compute} | Learning Rate: {optimizer.param_groups[0]['lr']}")
+            print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute()} | Top-5: {top5.compute()} | Learning Rate: {optimizer.param_groups[0]['lr']}")
     
     return loss_epoch / len(train_loader), top1.compute(), top5.compute(), cm.compute(), acc_per_class.compute(), all_features, all_labels
 
 def test(simclr_model, model, criterion, test_loader, device, args):
     top1 = MulticlassAccuracy(num_classes=args.n_classes)
-    top5 = TopKMultilabelAccuracy(k=5)
+    top5 = MulticlassAccuracy(k=5)
     cm = MulticlassConfusionMatrix(num_classes=args.n_classes)
     acc_per_class = MulticlassAccuracy(average=None, num_classes=args.n_classes)
     all_features = []
@@ -82,7 +83,7 @@ def test(simclr_model, model, criterion, test_loader, device, args):
         loss_epoch += loss.item()
         
         if step % 25 == 0:
-            print(f"Step [{step}/{len(test_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute()} | Top-5: {top5.compute}")
+            print(f"Step [{step}/{len(test_loader)}]\t Loss: {loss.item()} | Total Loss: {loss_epoch} | Top-1: {top1.compute()} | Top-5: {top5.compute()}")
     
         
     return loss_epoch / len(test_loader), top1.compute(), top5.compute(), cm.compute(), acc_per_class.compute(), all_features, all_labels
