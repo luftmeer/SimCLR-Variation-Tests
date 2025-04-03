@@ -260,6 +260,8 @@ class LinearEvaluationMonitor:
         csv_path = os.path.join(self.save_dir, "linear_eval_metrics.csv")
         if os.path.exists(csv_path):
             df = pd.read_csv(csv_path)
+            df['top1'] = df['top1'].astype(float)
+            df['top5'] = df['top5'].astype(float)
             summary_path = os.path.join(self.save_dir, "summary_report.txt")
             with open(summary_path, 'w') as f:
                 f.write("Linear Evaluation Summary Report\n")
