@@ -136,8 +136,8 @@ class TrainingMonitor:
         df.to_csv(os.path.join(self.save_dir, "training_log.csv"), index=False)
 
 class LinearEvaluationMonitor:
-    def __init__(self, save_dir, class_names=None):
-        self.save_dir = os.path.join(save_dir, "linear_eval_logs")
+    def __init__(self, save_dir, cpt_epoch: int, class_names=None):
+        self.save_dir = os.path.join(save_dir, "linear_eval_logs", str(cpt_epoch))
         os.makedirs(self.save_dir, exist_ok=True)
         self.class_names = class_names
         self.data = defaultdict(list)
