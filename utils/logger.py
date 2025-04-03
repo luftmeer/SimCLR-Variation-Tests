@@ -164,7 +164,9 @@ class LinearEvaluationMonitor:
         if not nan_found:
             self.tb_writer.add_text("Anomaly", "No NaNs detected in gradients", epoch)
 
-    def log_metrics(self, epoch, top1, top5, loss, lr, eval_time, per_class_acc, model=None, features=None, labels=None):
+    def log_metrics(self, epoch, top1, top5, loss, lr, eval_time, per_class_acc, model=None, features=None, labels=None, prefix=""):
+        tag = lambda name: f"{prefix}/{name}" if prefix else name
+
         self.data['epoch'].append(epoch)
         self.data['top1'].append(top1)
         self.data['top5'].append(top5)
@@ -179,8 +181,8 @@ class LinearEvaluationMonitor:
             self.data['frozen_params'].append(frozen)
             self.data['trainable_params'].append(trainable)
 
-            self.tb_writer.add_scalar('Params/Frozen', frozen, epoch)
-            self.tb_writer.add_scalar('Params/Trainable', trainable, epoch)
+            self.tb_writer.add_scalar(tag('Params/Frozen'), frozen, epoch)
+            self.tb_writer.add_scalar(tag('Params/Trainable'), trainable, epoch)
             self.log_model_weights(model, epoch)
             self.detect_anomalies(model, epoch)
 
@@ -192,13 +194,13 @@ class LinearEvaluationMonitor:
             for idx, acc in enumerate(per_class_acc):
                 label = self.class_names[idx] if self.class_names else str(idx)
                 self.data[f"acc_{label}"].append(acc.item())
-                self.tb_writer.add_scalar(f"PerClassAccuracy/{label}", acc, epoch)
-                
-        self.tb_writer.add_scalar('Accuracy/Top1', top1, epoch)
-        self.tb_writer.add_scalar('Accuracy/Top5', top5, epoch)
-        self.tb_writer.add_scalar('Loss', loss, epoch)
-        self.tb_writer.add_scalar('LearningRate', lr, epoch)
-        self.tb_writer.add_scalar('EvalTime', eval_time, epoch)
+                self.tb_writer.add_scalar(tag(f"PerClassAccuracy/{label}"), acc, epoch)
+
+        self.tb_writer.add_scalar(tag('Accuracy/Top1'), top1, epoch)
+        self.tb_writer.add_scalar(tag('Accuracy/Top5'), top5, epoch)
+        self.tb_writer.add_scalar(tag('Loss'), loss, epoch)
+        self.tb_writer.add_scalar(tag('LearningRate'), lr, epoch)
+        self.tb_writer.add_scalar(tag('EvalTime'), eval_time, epoch)
 
         self.log_tsne_async(features, labels, epoch)
         self._save_yaml(epoch)

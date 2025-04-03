@@ -192,8 +192,23 @@ def main(args):
             end = time.time()
             log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs', method='evaluate')
             
+            monitor.log_metrics(epoch=epoch, 
+                            top1=top1, 
+                            top5=top5, 
+                            loss=loss_epoch, 
+                            lr=optimizer.param_groups[0]['lr'], 
+                            eval_time=end-start, 
+                            per_class_acc=acc_per_class, 
+                            model=model, 
+                            features=features, 
+                            labels=labels,
+                            prefix='Val')
+            monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch)
+            
             for param in model.parameters():
                 param.requires_grad = True
+                
+            
         
     # Evaluate
     start = time.time()
@@ -211,7 +226,8 @@ def main(args):
                             per_class_acc=acc_per_class, 
                             model=model, 
                             features=features, 
-                            labels=labels)
+                            labels=labels,
+                            prefix='Val')
     monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch)
     
     # Save Evaluation
