@@ -339,15 +339,5 @@ class LinearEvaluationMonitor:
                 plt.close()
                 print(f"[Summary] Per-class accuracy heatmap saved to {heatmap_path}", flush=True)
 
-            # Create archive
-            zip_path = os.path.join(self.save_dir, f"{prefix}_linear_eval_logs.zip")
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for root, _, files in os.walk(self.save_dir):
-                    for file in files:
-                        if file != os.path.basename(zip_path):
-                            full_path = os.path.join(root, file)
-                            arcname = os.path.relpath(full_path, self.save_dir)
-                            zipf.write(full_path, arcname)
-            print(f"[Summary] Logs archived at {zip_path}", flush=True)
         else:
             print("[Summary] No metrics CSV found to summarize.", flush=True)
