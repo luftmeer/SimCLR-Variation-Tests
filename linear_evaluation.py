@@ -26,7 +26,7 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
     all_logits = []
     loss_epoch = 0
     for step, (img, target) in tqdm(enumerate(train_loader), desc='LE Training', total=len(train_loader)):
-        if args.ga and step % args.ga_count == 0 or not args.ga or step+1 == len(train_loader):
+        if args.ga and (step+1) % args.ga_count == 0 or not args.ga or (step+1) == len(train_loader):
             optimizer.zero_grad()
         
         img = img.to(device)
@@ -49,7 +49,7 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         loss_epoch += loss.item()
         
         loss.backward()
-        if args.ga and step % args.ga_count == 0 or not args.ga or step+1 == len(train_loader):
+        if args.ga and (step+1) % args.ga_count == 0 or not args.ga or (step+1) == len(train_loader):
             optimizer.step()
         
         if step % 50 == 0:

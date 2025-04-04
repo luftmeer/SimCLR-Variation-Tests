@@ -56,7 +56,7 @@ def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
 def train(model, optimizer, loss_fn, train_loader, local_rank, monitor, epoch, args):
     total_loss = 0
     for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
-        if args.ga and i % args.ga_count == 0 or not args.ga or i+1 == len(train_loader):
+        if args.ga and (i+1) % args.ga_count == 0 or not args.ga or (i+1) == len(train_loader):
             optimizer.zero_grad()
         
         
@@ -88,7 +88,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, monitor, epoch, a
         # First Case: Gradient Accumulation is active and the n-th batch is rached which is divisible by ga_count
         # Second Case: Gradient Accumulation is not available -> always do the step
         # Third Case: The current batch is the last one -> always optimize
-        if args.ga and i % args.ga_count == 0 or not args.ga or i+1 == len(train_loader):
+        if args.ga and (i+1) % args.ga_count == 0 or not args.ga or (i+1) == len(train_loader):
             optimizer.step()
         
         
