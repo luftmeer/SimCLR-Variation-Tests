@@ -226,23 +226,33 @@ class LinearEvaluationMonitor:
     def log_tsne(self, features, labels, epoch, prefix="train", logits=False):
         print(f"[t-SNE] Computing 2D projection... ({'logits' if logits else 'features'})", flush=True)
         tsne = TSNE(n_components=2, init='pca', random_state=42)
-        if logits:
-            reduced = tsne.fit_transform(features.detach().numpy())
-        else:
-            reduced = tsne.fit_transform(features.cpu().numpy())
+        reduced = tsne.fit_transform(features.detach().cpu().numpy() if logits else features.cpu().numpy())
 
-        plt.figure(figsize=(8, 6))
-        scatter = plt.scatter(reduced[:, 0], reduced[:, 1], c=labels.cpu(), cmap='tab10', alpha=0.6)
+        plt.figure(figsize=(12, 6))
+        ax = plt.gca()
+
+        scatter = ax.scatter(reduced[:, 0], reduced[:, 1], c=labels.cpu(), cmap='tab10', alpha=0.6)
+        
         if self.class_names:
-            legend = plt.legend(handles=scatter.legend_elements()[0], labels=self.class_names, loc='best')
-            plt.gca().add_artist(legend)
+            legend = ax.legend(
+                handles=scatter.legend_elements()[0],
+                labels=self.class_names,
+                loc='center left',
+                bbox_to_anchor=(1.02, 0.5),
+                borderaxespad=0.
+            )
 
         plt.title(f"t-SNE projection (Epoch {epoch})")
-        plt.tight_layout()
-        tsne_path = os.path.join(self.save_dir, f"{prefix}_tsne_{'logits' if logits else 'features'}_epoch_{epoch}.png" if prefix else f"tsne_epoch_{epoch}.png")
-        plt.savefig(tsne_path)
+        plt.tight_layout(rect=[0, 0, 0.85, 1])  # leave space on right for legend
+
+        tsne_path = os.path.join(
+            self.save_dir,
+            f"{prefix}_tsne_{'logits' if logits else 'features'}_epoch_{epoch}.png" if prefix else f"tsne_epoch_{epoch}.png"
+        )
+        plt.savefig(tsne_path, bbox_inches='tight')
         plt.close()
         print(f"[t-SNE] Saved to {tsne_path}", flush=True)
+
 
     def log_confusion_matrix(self, y_true=None, y_pred=None, cm_tensor=None, epoch=0, prefix: str='train'):
         tag = lambda name: f"{prefix}_{name}" if prefix else name
