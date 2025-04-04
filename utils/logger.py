@@ -226,7 +226,10 @@ class LinearEvaluationMonitor:
     def log_tsne(self, features, labels, epoch, prefix="train", logits=False):
         print(f"[t-SNE] Computing 2D projection... ({'logits' if logits else 'features'})", flush=True)
         tsne = TSNE(n_components=2, init='pca', random_state=42)
-        reduced = tsne.fit_transform(features.cpu().numpy())
+        if logits:
+            reduced = tsne.fit_transform(features.detach().numpy())
+        else:
+            reduced = tsne.fit_transform(features.cpu().numpy())
 
         plt.figure(figsize=(8, 6))
         scatter = plt.scatter(reduced[:, 0], reduced[:, 1], c=labels.cpu(), cmap='tab10', alpha=0.6)
