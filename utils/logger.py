@@ -164,7 +164,7 @@ class LinearEvaluationMonitor:
         if not nan_found:
             self.tb_writer.add_text("Anomaly", "No NaNs detected in gradients", epoch)
 
-    def log_metrics(self, epoch, top1, top5, loss, lr, eval_time, per_class_acc, model=None, features=None, labels=None, prefix: str="train"):
+    def log_metrics(self, epoch, top1, top5, loss, lr, eval_time, per_class_acc, model=None, features=None, labels=None, logits=None, prefix: str="train"):
         tag = lambda name: f"{prefix}/{name}" if prefix else name
 
         self.data['epoch'].append(epoch)
@@ -189,7 +189,11 @@ class LinearEvaluationMonitor:
 
         if features is not None and labels is not None and (epoch == 0 or (epoch+1) % 10 == 0 or (epoch+1)==101):
             metadata = [", ".join(self.class_names[l.item()]) if isinstance(self.class_names[l.item()], tuple) else str(self.class_names[l.item()]) for l in labels]
-            self.tb_writer.add_embedding(features, metadata=metadata, tag=f"{prefix}_embeddings/epoch_{epoch}")
+            self.tb_writer.add_embedding(features, metadata=metadata, tag=f"{prefix}_features_embeddings/epoch_{epoch}")
+        
+        if logits is not None and labels is not None and (epoch == 0 or (epoch+1) % 10 == 0 or (epoch+1)==101):
+            metadata = [", ".join(self.class_names[l.item()]) if isinstance(self.class_names[l.item()], tuple) else str(self.class_names[l.item()]) for l in labels]
+            self.tb_writer.add_embedding(logits, metadata=metadata, tag=f"{prefix}_logits_embeddings/epoch_{epoch}")
 
         if per_class_acc is not None:
             for idx, acc in enumerate(per_class_acc):
@@ -203,7 +207,8 @@ class LinearEvaluationMonitor:
         self.tb_writer.add_scalar(tag('LearningRate'), lr, epoch)
         self.tb_writer.add_scalar(tag('EvalTime'), eval_time, epoch)
 
-        self.log_tsne(features, labels, epoch, prefix)
+        self.log_tsne(features, labels, epoch, prefix, logits=False)
+        self.log_tsne(logits, labels, epoch, prefix, logits=True)
         self._save_yaml(epoch, prefix)
         self._save_csv()
         self.summarize_all_epochs(prefix)
@@ -218,8 +223,8 @@ class LinearEvaluationMonitor:
         df = pd.DataFrame(self.data)
         df.to_csv(os.path.join(self.save_dir, "linear_eval_metrics.csv"), index=False)
         
-    def log_tsne(self, features, labels, epoch, prefix="train"):
-        print("[t-SNE] Computing 2D projection...", flush=True)
+    def log_tsne(self, features, labels, epoch, prefix="train", logits=False):
+        print(f"[t-SNE] Computing 2D projection... ({'logits' if logits else 'features'})", flush=True)
         tsne = TSNE(n_components=2, init='pca', random_state=42)
         reduced = tsne.fit_transform(features.cpu().numpy())
 
@@ -231,7 +236,7 @@ class LinearEvaluationMonitor:
 
         plt.title(f"t-SNE projection (Epoch {epoch})")
         plt.tight_layout()
-        tsne_path = os.path.join(self.save_dir, f"{prefix}_tsne_epoch_{epoch}.png" if prefix else f"tsne_epoch_{epoch}.png")
+        tsne_path = os.path.join(self.save_dir, f"{prefix}_tsne_{'logits' if logits else 'features'}_epoch_{epoch}.png" if prefix else f"tsne_epoch_{epoch}.png")
         plt.savefig(tsne_path)
         plt.close()
         print(f"[t-SNE] Saved to {tsne_path}", flush=True)

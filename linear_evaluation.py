@@ -23,6 +23,7 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
     acc_per_class = MulticlassAccuracy(average=None, num_classes=args.n_classes)
     all_features = []
     all_labels = []
+    all_logits = []
     loss_epoch = 0
     for step, (img, target) in tqdm(enumerate(train_loader), desc='LE Training', total=len(train_loader)):
         optimizer.zero_grad()
@@ -36,6 +37,8 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         all_labels.append(target.cpu())
         
         out = model(h[0])
+        all_logits.append(out.cpu())
+        
         loss = criterion(out, target)
         
         top1.update(out, target)
@@ -53,8 +56,9 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
     print(f"Step [{step}/{len(train_loader)}]\t Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()} | Learning Rate: {optimizer.param_groups[0]['lr']}", flush=True)
     features = torch.cat(all_features)
     labels = torch.cat(all_labels)
+    logits = torch.cat(all_logits)
     
-    return loss_epoch / len(train_loader), top1.compute().item(), top5.compute().item(), cm.compute(), acc_per_class.compute(), features, labels
+    return loss_epoch / len(train_loader), top1.compute().item(), top5.compute().item(), cm.compute(), acc_per_class.compute(), features, labels, logits
 
 def test(simclr_model, model, criterion, test_loader, device, args):
     top1 = MulticlassAccuracy(num_classes=args.n_classes)
@@ -63,6 +67,7 @@ def test(simclr_model, model, criterion, test_loader, device, args):
     acc_per_class = MulticlassAccuracy(average=None, num_classes=args.n_classes)
     all_features = []
     all_labels = []
+    all_logits = []
     loss_epoch = 0
     model.eval()
     for step, (img, target) in tqdm(enumerate(test_loader), desc='Evaluating:', total=len(test_loader)):
@@ -77,6 +82,7 @@ def test(simclr_model, model, criterion, test_loader, device, args):
         all_labels.append(target.cpu())
         
         out = model(h[0])
+        all_logits.append(out.cpu())
         loss = criterion(out, target)
         
         top1.update(out, target)
@@ -91,8 +97,9 @@ def test(simclr_model, model, criterion, test_loader, device, args):
     print(f"Step [{step}/{len(test_loader)}]\t | Total Loss: {loss_epoch} | Top-1: {top1.compute().item()} | Top-5: {top5.compute().item()}", flush=True)
     features = torch.cat(all_features)
     labels = torch.cat(all_labels)
+    logits = torch.cat(all_logits)
     
-    return loss_epoch / len(test_loader), top1.compute().item(), top5.compute().item(), cm.compute(), acc_per_class.compute(), features, labels
+    return loss_epoch / len(test_loader), top1.compute().item(), top5.compute().item(), cm.compute(), acc_per_class.compute(), features, labels, logits
         
 
 def main(args):
@@ -150,7 +157,7 @@ def main(args):
         model.train()
         print(f'Epoch {epoch+1} of {args.epochs}', flush=True)
         start = time.time()
-        loss_epoch, top1, top5, cm, acc_per_class, features, labels = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
+        loss_epoch, top1, top5, cm, acc_per_class, features, labels, logits = train(simclr_model, model, optimizer, criterion, train_loader, device, args)
         end = time.time()
         
         print(f"[Epoch {epoch+1}] Loss: {loss_epoch} | Top-1: {top1} | Top-5: {top5} | Learning Rate: {optimizer.param_groups[0]['lr']}")
@@ -177,7 +184,9 @@ def main(args):
                             per_class_acc=acc_per_class, 
                             model=model, 
                             features=features, 
-                            labels=labels)
+                            labels=labels,
+                            logits=logits,
+                            prefix='train')
         monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch)
         
         scheduler.step()
@@ -188,7 +197,7 @@ def main(args):
             for param in model.parameters():
                 param.requires_grad = False
             start = time.time()
-            loss_epoch, top1, top5, cm, acc_per_class, features, labels = test(simclr_model, model, criterion, test_loader, device, args)
+            loss_epoch, top1, top5, cm, acc_per_class, features, labels, logits = test(simclr_model, model, criterion, test_loader, device, args)
             end = time.time()
             log_evaluation(epoch=epoch, loss=loss_epoch, accuracy=top1, args=args, elapsed_time=end-start, cpt_epoch=cpt_epoch, top5=top5, base_folder='runs', method='val')
             
@@ -202,6 +211,7 @@ def main(args):
                             model=model, 
                             features=features, 
                             labels=labels,
+                            logits=logits,
                             prefix='val')
             monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch, prefix='val')
             
@@ -212,7 +222,7 @@ def main(args):
         
     # Evaluate
     start = time.time()
-    loss_epoch, top1, top5, cm, acc_per_class, features, labels = test(simclr_model, model, criterion, test_loader, device, args)
+    loss_epoch, top1, top5, cm, acc_per_class, features, labels, logits = test(simclr_model, model, criterion, test_loader, device, args)
     end = time.time()
     
     print(f"[EVAL]\t Loss: {loss_epoch} | Top-1: {top1} | Top-5: {top5}", flush=True)        
@@ -225,8 +235,9 @@ def main(args):
                             eval_time=end-start, 
                             per_class_acc=acc_per_class, 
                             model=model, 
-                            features=features, 
+                            features=features,
                             labels=labels,
+                            logits=logits,
                             prefix='val')
     monitor.log_confusion_matrix(cm_tensor=cm, epoch=epoch, prefix='val')
     
