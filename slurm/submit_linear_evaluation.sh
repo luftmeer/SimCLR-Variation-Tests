@@ -15,7 +15,7 @@ while [[ "$#" -gt 0 ]]; do
         --n_classes) n_classes="$2"; shift ;;
         --seed) seed="$2"; shift ;;
         --save-every-epoch) save_every_epoch="$2"; shift ;;
-        --gradient-accumulation) ga_flag="--gradient--accumulation"; shift ;;
+        --gradient-accumulation) ga_flag="--gradient-accumulation"; shift ;;
         --ga-count) ga_count="$2"; shift ;;
         --eval-every) eval_every="$2"; shift ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
