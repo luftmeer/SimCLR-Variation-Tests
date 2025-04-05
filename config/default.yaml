@@ -26,7 +26,7 @@
 # Additional Settings
 # - resume: False # Continue from a previous checkpoint. Note: A checkpoint file needs to be given.
 - seed: 42 # Seed for numpy and torch
-- save_every_epoch: 50 # Save the current state of the model after each nth Epoch
+- save_every_epoch: 10 # Save the current state of the model after each nth Epoch
 
 # Hugging Face
 # IMPORTANT: Don't store your Hugging Face Token in any file and upload it. Rather use env variable HF_TOKEN
@@ -41,7 +41,3 @@
 # Gradient accumulation
 - ga: False
 - ga_count: 8
-
-# Linear Evaluation
-- epochs_le: 100
-- save_every_epoch_le: 10
