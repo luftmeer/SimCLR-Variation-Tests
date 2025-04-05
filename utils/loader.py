@@ -115,11 +115,11 @@ def save_model_eval(simclr_model: torch.nn.Module, model: torch.nn.Module, args:
                         f'cpt_epoch{cpt_epoch}',
                         '' if best_model else f'epoch{epoch+1}',
                     ]
+    if not best_model:
+        filename = path + f"/{datetime.now().strftime('%Y%m%d%H%M%S')}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
+    else:
+        filename = path + f"/{'_'.join(str(elem) for elem in filename_content)}.cpt.best"
     
-    filename = path + f"/{datetime.now().strftime('%Y%m%d%H%M%S')}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
-    
-    if best_model:
-        filename = filename + ".best"
     
     torch.save(
             {
