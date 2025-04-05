@@ -55,6 +55,7 @@ def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
 
 def train(model, optimizer, loss_fn, train_loader, local_rank, monitor, epoch, args):
     total_loss = 0
+    optimizer.zero_grad() # In case Gradient Accumulation is enabled and won't execute in first step
     for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
         if args.ga and (i+1) % args.ga_count == 0 or not args.ga or (i+1) == len(train_loader):
             optimizer.zero_grad()
@@ -182,6 +183,9 @@ def main(args):
         torch.autograd.set_detect_anomaly(True)
 
     model.train()
+    for param in model.parameters():
+        param.requires_grad = True
+    
     for epoch in range(start_epoch, args.epochs):        
         if train_sampler is not None:
             train_sampler.set_epoch(epoch)

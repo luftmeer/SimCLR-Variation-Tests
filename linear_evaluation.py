@@ -25,6 +25,7 @@ def train(simclr_model, model, optimizer, criterion, train_loader, device, args)
     all_labels = []
     all_logits = []
     loss_epoch = 0
+    optimizer.zero_grad() # In case Gradient Accumulation is enabled and won't execute in first step
     for step, (img, target) in tqdm(enumerate(train_loader), desc='LE Training', total=len(train_loader)):
         if args.ga and (step+1) % args.ga_count == 0 or not args.ga or (step+1) == len(train_loader):
             optimizer.zero_grad()
