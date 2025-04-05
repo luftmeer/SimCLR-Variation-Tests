@@ -13,7 +13,6 @@
 
 #SBATCH --partition=NvidiaAll
 #Number of nodes and tasks per node:
-#SBATCH --nodes=4
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=4
 #SBATCh --cpus-per-task=8
@@ -24,6 +23,7 @@ ga_flag=""
 # --- Argument parsing ---
 while [[ "$#" -gt 0 ]]; do
     case $1 in
+        --nodes) NUM_NODES="$2"; shift ;;
         --config) config="$2"; shift ;;
         # Encoder
         --encoder) encoder="$2"; shift ;;
@@ -71,6 +71,7 @@ projection_dim="${projection_dim:-64}"
 temperature="${temperature:-0.5}"
 checkpoint="${checkpoint:-NULL}"
 ga_count="${ga_count:-8}"
+NUM_NODES="${NUM_NODES:-4}"
 
 
 # Activate Environment
@@ -145,7 +146,7 @@ EOF
 
 
 # Execute
-srun torchrun --nnodes=4 \
+srun --nodes="$NUM_NODES" torchrun --nnodes="$NUM_NODES" \
     --nproc_per_node=1 \
     --rdzv_id=$RANDOM \
     --rdzv_backend=c10d \
