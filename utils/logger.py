@@ -187,6 +187,7 @@ class LinearEvaluationMonitor:
             self.log_model_weights(model, epoch)
             self.detect_anomalies(model, epoch)
 
+        """        
         if features is not None and labels is not None and (epoch == 0 or (epoch+1) % 10 == 0 or (epoch+1)==101):
             metadata = [", ".join(self.class_names[l.item()]) if isinstance(self.class_names[l.item()], tuple) else str(self.class_names[l.item()]) for l in labels]
             self.tb_writer.add_embedding(features, metadata=metadata, tag=f"{prefix}_features_embeddings/epoch_{epoch}")
@@ -194,7 +195,8 @@ class LinearEvaluationMonitor:
         if logits is not None and labels is not None and (epoch == 0 or (epoch+1) % 10 == 0 or (epoch+1)==101):
             metadata = [", ".join(self.class_names[l.item()]) if isinstance(self.class_names[l.item()], tuple) else str(self.class_names[l.item()]) for l in labels]
             self.tb_writer.add_embedding(logits, metadata=metadata, tag=f"{prefix}_logits_embeddings/epoch_{epoch}")
-
+        """
+        
         if per_class_acc is not None:
             for idx, acc in enumerate(per_class_acc):
                 label = self.class_names[idx] if self.class_names else str(idx)

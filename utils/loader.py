@@ -109,10 +109,11 @@ def save_model_eval(simclr_model: torch.nn.Module, model: torch.nn.Module, args:
                         f'cpt_epoch{cpt_epoch}')
     os.makedirs(path, exist_ok=True)
     
-    filename_content = [args.encoder,
+    filename_content = ['linear-evaluation',
+                        args.encoder,
                         args.optimizer,
                         f'cpt_epoch{cpt_epoch}',
-                        f'epoch{epoch+1}',
+                        '' if best_model else f'epoch{epoch+1}',
                     ]
     
     filename = path + f"/{datetime.now().strftime('%Y%m%d%H%M%S')}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
