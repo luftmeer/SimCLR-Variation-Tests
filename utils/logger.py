@@ -163,6 +163,7 @@ class TrainingMonitor:
 
             if isinstance(emb, list): emb = torch.cat(emb, dim=0)
             if isinstance(proj, list): proj = torch.cat(proj, dim=0)
+            if isinstance(labels, list): labels = torch.cat(labels, dim=0)
 
             emb_np = emb.numpy()
             proj_np = proj.numpy()
