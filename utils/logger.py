@@ -39,7 +39,7 @@ class TrainingMonitor:
 
         self.tb_writer = SummaryWriter(log_dir=os.path.join(self.save_dir, "tensorboard")) if self.enabled and self.rank == 0 else None
 
-    def log_epoch(self, epoch, lr, final_similarity=None):
+    def log_epoch(self, epoch, lr, elapsed_time, final_similarity=None):
         if not self.enabled or self.rank != 0:
             return
 
@@ -110,7 +110,7 @@ class TrainingMonitor:
                 self.tb_writer.add_histogram("Epoch/Final_Similarity_Row0", final_similarity[0], epoch)
 
         # CSV export
-        row = {"epoch": epoch, "lr": lr}
+        row = {"epoch": epoch, "lr": lr, "elapsed_time": elapsed_time}
         row.update(pos_neg_dict)
         self._append_epoch_to_csv(row)
 

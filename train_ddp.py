@@ -207,7 +207,7 @@ def main(args):
         
         print(f'Epoch {epoch+1} | Global Rank {global_rank} | Local Rank {local_rank} | Loss: {loss_epoch}')
         
-        monitor.log_epoch(epoch, optimizer.param_groups[0]["lr"], sim)
+        monitor.log_epoch(epoch, optimizer.param_groups[0]["lr"], end-start, sim)
         monitor.log_tsne_embeddings(all_embeddings, all_projections, all_labels, epoch)
         
         if scheduler:
