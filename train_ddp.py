@@ -136,7 +136,7 @@ def main(args):
         batch_size=args.batch_size * dist.get_world_size(),
         maxlen=500,
         enabled=True,
-        rank=local_rank,
+        rank=global_rank,
         n_augments=args.augmentations,
     )
     
