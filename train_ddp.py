@@ -12,6 +12,7 @@ from utils.log_loss import log_loss
 import yaml
 import time
 from itertools import combinations
+import datetime
 
 # DDP
 from torch.utils.data.distributed import DistributedSampler
@@ -32,7 +33,7 @@ BASE_FOLDER = 'runs'
 
 def ddp_setup():
    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
-   init_process_group(backend="nccl")
+   init_process_group(backend="nccl", timeout=datetime.timedelta(minutes=20))
 
 def gather_from_world(tensor: torch.Tensor) -> torch.Tensor:
     """Gather all projections from the other nodes and GPUs.
