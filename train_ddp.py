@@ -201,13 +201,13 @@ def main(args):
         
         start = time.time()
         
-        loss_epoch, sim, all_embeddings, all_projections, all_positives, all_negatives = train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, monitor, epoch, args)
+        loss_epoch, sim, all_embeddings, all_projections = train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, monitor, epoch, args)
         
         end = time.time()
         
         print(f'Epoch {epoch+1} | Global Rank {global_rank} | Local Rank {local_rank} | Loss: {loss_epoch}')
         
-        monitor.log_epoch(epoch, all_positives, all_negatives, optimizer.param_groups[0]["lr"], sim)
+        monitor.log_epoch(epoch, optimizer.param_groups[0]["lr"], sim)
         monitor.log_tsne_embeddings(all_embeddings, all_projections)
         
         if scheduler:
