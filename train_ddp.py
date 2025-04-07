@@ -143,9 +143,9 @@ def main(args):
     
     train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN, args=args)
 
-    train_sampler = DistributedSampler(train_dataset, num_replicas=dist.get_world_size(), rank=local_rank, shuffle=True)
-
     tiny_subset = torch.utils.data.Subset(train_dataset, indices=list(range(16)))
+    train_sampler = DistributedSampler(tiny_subset, num_replicas=dist.get_world_size(), rank=local_rank, shuffle=True)
+
     
     train_loader = torch.utils.data.DataLoader(
             tiny_subset,
