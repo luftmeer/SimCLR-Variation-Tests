@@ -314,6 +314,16 @@ class TrainingMonitor:
 
                 print(f"[Similarity Plot] Saved {filename}")
     
+    def check_embedding_collapse(embeddings, epoch=None):
+        for emb in embeddings:
+            if isinstance(emb, list): emb = torch.cat(emb, dim=0)
+            norms = emb.norm(dim=1)
+            print(f"\n📉 Embedding Norms{' — Epoch ' + str(epoch) if epoch is not None else ''}:")
+            print(f"  Mean norm: {norms.mean():.4f}")
+            print(f"  Std dev  : {norms.std():.4f}")
+            print(f"  Range    : {norms.min():.4f} to {norms.max():.4f}")
+
+    
     def _save_similarity_csv(self, epoch):
         if not self.positive_samples or not self.negative_samples:
             return
