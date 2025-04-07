@@ -314,7 +314,7 @@ class TrainingMonitor:
 
                 print(f"[Similarity Plot] Saved {filename}")
     
-    def check_embedding_collapse(embeddings, epoch=None):
+    def check_embedding_collapse(self, embeddings, epoch=None):
         for emb in embeddings:
             if isinstance(emb, list): emb = torch.cat(emb, dim=0)
             norms = emb.norm(dim=1)
