@@ -220,7 +220,7 @@ class TrainingMonitor:
             self.tb_writer.add_scalar("Low Grad Count", very_low_grad_count, step)
     
     def log_logits(self, batch_idx, epoch, comb_nr, logits=None):
-        if not self.enabled or self.rank != 0 or not logits:
+        if not self.enabled or self.rank != 0 or isinstance(logits, type(None)):
             return
         
         step = batch_idx + (epoch * self.batch_size if epoch is not None else 0)
