@@ -145,12 +145,11 @@ def main(args):
     
     train_dataset = get_dataset(dataset_name=args.dataset_name, train=args.dataset_train, image_size=args.resize, augmentations=args.augmentations, HF_TOKEN=args.HF_TOKEN, args=args)
 
-    tiny_subset = torch.utils.data.Subset(train_dataset, indices=list(range(16)))
-    train_sampler = DistributedSampler(tiny_subset, num_replicas=dist.get_world_size(), rank=local_rank, shuffle=True)
+    train_sampler = DistributedSampler(train_dataset, num_replicas=dist.get_world_size(), rank=local_rank, shuffle=True)
 
     
     train_loader = torch.utils.data.DataLoader(
-            tiny_subset,
+            train_dataset,
             batch_size=args.batch_size,
             shuffle=False,
             drop_last=True,
@@ -209,8 +208,8 @@ def main(args):
         print(f'Epoch {epoch+1} | Global Rank {global_rank} | Local Rank {local_rank} | Loss: {loss_epoch}')
         
         monitor.log_epoch(epoch, optimizer.param_groups[0]["lr"], end-start, sim)
-        #monitor.log_tsne_embeddings(all_embeddings, all_projections, all_labels, epoch)
-        #monitor.check_embedding_collapse(all_embeddings, epoch)
+        monitor.log_tsne_embeddings(all_embeddings, all_projections, all_labels, epoch)
+        monitor.check_embedding_collapse(all_embeddings, epoch)
         
         if scheduler:
             scheduler.step()
