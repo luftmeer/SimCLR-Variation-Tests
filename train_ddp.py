@@ -1,7 +1,6 @@
 import argparse
 
 from simclr.simclr import SimCLR
-from simclr.transform import SimCLRTransform
 from simclr.loss import NTXentLoss
 import torch
 from models.encoder import get_encoder
@@ -146,6 +145,8 @@ def main(args):
 
     train_sampler = DistributedSampler(train_dataset, num_replicas=dist.get_world_size(), rank=local_rank, shuffle=True)
 
+    tiny_subset = torch.utils.data.Subset(train_dataset, indices=[0, 1])
+    
     train_loader = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=args.batch_size,
