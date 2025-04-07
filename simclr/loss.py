@@ -29,7 +29,8 @@ class NTXentLoss(nn.Module):
         z = torch.cat((z_i, z_j), dim=0)
         z = nn.functional.normalize(z, dim=1)
 
-        sim = self.similarity_fn(z.unsqueeze(1), z.unsqueeze(0)) / self.temperature
+        #sim = self.similarity_fn(z.unsqueeze(1), z.unsqueeze(0)) / self.temperature
+        sim = torch.matmul(z, z.T) / self.temperature
         sim_i_j = torch.diag(sim, N // 2)
         sim_j_i = torch.diag(sim, -N // 2)
 
