@@ -161,9 +161,9 @@ class TrainingMonitor:
             
             # Convert to numpy
             if isinstance(embeddings[i], torch.Tensor):
-                embedding = embeddings[i].detach().cpu().numpy()
+                embedding = embeddings[i].numpy()
             if isinstance(projections[i], torch.Tensor):
-                projection = projections[i].detach().cpu().numpy()
+                projection = projections[i].numpy()
             if isinstance(labels, torch.Tensor):
                 labels = labels.detach().cpu().numpy()
 
