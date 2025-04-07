@@ -105,7 +105,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
             optimizer.step()
         
 
-    return total_loss / len(train_loader), sim, all_embeddings, all_projections
+    return total_loss / len(train_loader), sim, all_embeddings, all_projections, all_labels
 
 
 @record
@@ -201,14 +201,14 @@ def main(args):
         
         start = time.time()
         
-        loss_epoch, sim, all_embeddings, all_projections = train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, monitor, epoch, args)
+        loss_epoch, sim, all_embeddings, all_projections, all_labels = train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, monitor, epoch, args)
         
         end = time.time()
         
         print(f'Epoch {epoch+1} | Global Rank {global_rank} | Local Rank {local_rank} | Loss: {loss_epoch}')
         
         monitor.log_epoch(epoch, optimizer.param_groups[0]["lr"], sim)
-        monitor.log_tsne_embeddings(all_embeddings, all_projections)
+        monitor.log_tsne_embeddings(all_embeddings, all_projections, all_labels, epoch)
         
         if scheduler:
             scheduler.step()
