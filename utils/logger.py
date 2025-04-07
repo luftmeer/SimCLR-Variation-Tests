@@ -158,22 +158,22 @@ class TrainingMonitor:
         if not self.enabled or self.rank != 0:
             return
         for i in range(len(embeddings)):
-            
-            # Convert to numpy
-            if isinstance(embeddings[i], torch.Tensor):
-                embedding = embeddings[i].numpy()
-            if isinstance(projections[i], torch.Tensor):
-                projection = projections[i].numpy()
-            if isinstance(labels, torch.Tensor):
-                labels = labels.detach().cpu().numpy()
+            emb = embeddings[i]
+            proj = projections[i]
 
+            if isinstance(emb, list): emb = torch.cat(emb, dim=0)
+            if isinstance(proj, list): proj = torch.cat(proj, dim=0)
+
+            emb_np = emb.numpy()
+            proj_np = proj.numpy()
+            label_np = labels.numpy() if isinstance(labels, torch.Tensor) else labels
             # Run t-SNE
-            tsne_e = TSNE(n_components=2, perplexity=30, init='pca', learning_rate='auto').fit_transform(embedding)
-            tsne_p = TSNE(n_components=2, perplexity=30, init='pca', learning_rate='auto').fit_transform(projection)
+            tsne_e = TSNE(n_components=2, perplexity=30, init='pca', learning_rate='auto').fit_transform(emb_np)
+            tsne_p = TSNE(n_components=2, perplexity=30, init='pca', learning_rate='auto').fit_transform(proj_np)
 
             # Save plots
-            self._save_tsne_plot(tsne_e, labels, f"tsne/tsne_embeddings_epoch{epoch}_augmentation{i}.png", title="t-SNE: Encoder Embeddings")
-            self._save_tsne_plot(tsne_p, labels, f"tsne/tsne_projections_epoch{epoch}_augmentation{i}.png", title="t-SNE: Projected Features")
+            self._save_tsne_plot(tsne_e, label_np, f"tsne/tsne_embeddings_epoch{epoch}_augmentation{i}.png", title="t-SNE: Encoder Embeddings")
+            self._save_tsne_plot(tsne_p, label_np, f"tsne/tsne_projections_epoch{epoch}_augmentation{i}.png", title="t-SNE: Projected Features")
 
             # Save raw 2D coords
             df = pd.DataFrame({
