@@ -73,7 +73,8 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, monitor, epoch, a
         
         loss.backward()
 
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        if args.grad_clip:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         
         monitor.log(
             model=model,
