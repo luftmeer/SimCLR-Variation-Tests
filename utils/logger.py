@@ -8,35 +8,193 @@ import time
 import yaml
 import torch
 import zipfile
+import seaborn as sns
 from sklearn.manifold import TSNE
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from PIL import Image
+import numpy as np
+import math
 
 
 class TrainingMonitor:
-    def __init__(self, save_dir, plot_every=100, maxlen=500, enabled=True, rank=0):
+    def __init__(self, save_dir,  batch_size, n_augments=2, plot_every=100, maxlen=500, enabled=True, rank=0):
         self.save_dir = os.path.join(save_dir, "training_logs")
         os.makedirs(self.save_dir, exist_ok=True)
         self.plot_every = plot_every
         self.rank = rank
         self.enabled = enabled
+        self.n_augments = n_augments
 
-        self.gradient_norms = deque(maxlen=maxlen)
         self.losses = deque(maxlen=maxlen)
         self.lrs = deque(maxlen=maxlen)
         self.low_grad_counts = deque(maxlen=maxlen)
         self.batch_indices = deque(maxlen=maxlen)
+        
+        self.combs = math.comb(self.n_augments, 2)
+        self.comb_losses = [] if self.combs == 1 else [[] for _ in range(self.combs)]
+        self.positive_samples = [] if self.combs == 1 else [[] for _ in range(self.combs)]
+        self.negative_samples = [] if self.combs == 1 else [[] for _ in range(self.combs)]
+        self.batch_size = batch_size
 
         self.tb_writer = SummaryWriter(log_dir=os.path.join(self.save_dir, "tensorboard")) if self.enabled and self.rank == 0 else None
 
-    def log(self, model, loss_value, optimizer, batch_idx, epoch=None, logits=None):
+    def log_epoch(self, epoch, lr, final_similarity=None):
+        if not self.enabled or self.rank != 0:
+            return
+
+        # TensorBoard logging
+        if self.tb_writer:
+            self.tb_writer.add_scalar("Epoch/Learning_Rate", lr, epoch)
+        
+        # Combine tensors
+        pos_neg_dict = {}
+        if self.combs == 1:
+            positives = torch.cat(self.positive_samples)
+            negatives = torch.cat(self.negative_samples).view(-1)
+            avg_loss = np.mean(self.comb_losses)
+            
+            # Stats
+            mean_pos = positives.mean().item()
+            mean_neg = negatives.mean().item()
+            margin = mean_pos - mean_neg
+            std_pos = positives.std().item()
+            std_neg = negatives.std().item()
+            
+            pos_neg_dict['average_loss'] = avg_loss
+            pos_neg_dict['mean_positive'] = mean_pos
+            pos_neg_dict['mean_negative'] = mean_neg
+            pos_neg_dict['contrast_margin'] = margin
+            pos_neg_dict['std_positive'] = std_pos
+            pos_neg_dict['std_negative'] = std_neg
+            
+            if self.tb_writer:
+                self.tb_writer.add_scalar("Epoch/Loss", avg_loss, epoch)
+                self.tb_writer.add_scalar("Epoch/Mean_Positive", mean_pos, epoch)
+                self.tb_writer.add_scalar("Epoch/Mean_Negative", mean_neg, epoch)
+                self.tb_writer.add_scalar("Epoch/Contrast_Margin", margin, epoch)
+                
+                self.tb_writer.add_histogram("Epoch/Positive Similarities", positives, epoch)
+                self.tb_writer.add_histogram("Epoch/Negative Similarities", negatives, epoch)
+                
+        else:
+            for comb in range(self.combs):
+                positives = torch.cat(self.positive_samples[comb])
+                negatives = torch.cat(self.negative_samples[comb]).view(-1)
+                avg_loss = np.mean(self.comb_losses[comb])
+                
+                # Stats
+                mean_pos = positives.mean().item()
+                mean_neg = negatives.mean().item()
+                margin = mean_pos - mean_neg
+                std_pos = positives.std().item()
+                std_neg = negatives.std().item()
+                
+                pos_neg_dict[f'average_loss_{comb}'] = avg_loss
+                pos_neg_dict[f'mean_positive_{comb}'] = mean_pos
+                pos_neg_dict[f'mean_negative_{comb}'] = mean_neg
+                pos_neg_dict[f'contrast_margin_{comb}'] = margin
+                pos_neg_dict[f'std_positive_{comb}'] = std_pos
+                pos_neg_dict[f'std_negative_{comb}'] = std_neg
+                
+                if self.tb_writer:
+                    self.tb_writer.add_scalar(f"Epoch/Loss_{comb}", avg_loss, epoch)
+                    self.tb_writer.add_scalar(f"Epoch/Mean_Positive_{comb}", mean_pos, epoch)
+                    self.tb_writer.add_scalar(f"Epoch/Mean_Negative_{comb}", mean_neg, epoch)
+                    self.tb_writer.add_scalar(f"Epoch/Contrast_Margin_{comb}", margin, epoch)
+                    
+                    self.tb_writer.add_histogram(f"Epoch/Positive Similarities_{comb}", positives, epoch)
+                    self.tb_writer.add_histogram(f"Epoch/Negative Similarities_{comb}", negatives, epoch)   
+        
+            if final_similarity is not None and final_similarity.shape[0] <= 128:
+                self.tb_writer.add_histogram("Epoch/Final_Similarity_Row0", final_similarity[0], epoch)
+
+        # CSV export
+        row = {"epoch": epoch, "lr": lr}
+        row.update(pos_neg_dict)
+        self._append_epoch_to_csv(row)
+
+        # Optional: console summary
+        print(f"\n[Epoch {epoch}] Logging Summary:")
+        if self.combs == 1:
+            print(f"  Loss: {avg_loss:.4f} | Pos: {mean_pos:.4f} ± {std_pos:.4f} | "
+                f"Neg: {mean_neg:.4f} ± {std_neg:.4f} | Margin: {margin:.4f}")
+        else:
+            for comb in range(self.combs):
+                avg_loss = pos_neg_dict[f'average_loss_{comb}']
+                mean_pos = pos_neg_dict[f'mean_positive_{comb}']
+                mean_neg = pos_neg_dict[f'mean_negative_{comb}']
+                std_pos = pos_neg_dict[f'std_positive_{comb}']
+                std_neg = pos_neg_dict[f'std_negative_{comb}']
+                margin = pos_neg_dict[f'contrast_margin_{comb}']
+
+                print(f"  Combo {comb:>2}: Loss {avg_loss:.4f} | Pos: {mean_pos:.4f} ± {std_pos:.4f} | "
+                    f"Neg: {mean_neg:.4f} ± {std_neg:.4f} | Margin: {margin:.4f}")
+        
+        # Cleanup
+        if self.combs == 1:
+            self.positive_samples.clear()
+            self.negative_samples.clear()
+            self.comb_losses.clear()
+        else:
+            for lst in (self.positive_samples, self.negative_samples, self.comb_losses):
+                for sublist in lst:
+                    sublist.clear()
+    
+    def _append_epoch_to_csv(self, row_dict):
+        csv_path = os.path.join(self.save_dir, "epoch_log.csv")
+        df_new = pd.DataFrame([row_dict])
+
+        if not os.path.exists(csv_path):
+            df_new.to_csv(csv_path, index=False)
+        else:
+            df_existing = pd.read_csv(csv_path)
+            df_combined = pd.concat([df_existing, df_new], ignore_index=True)
+            df_combined.to_csv(csv_path, index=False)
+    
+    def log_tsne_embeddings(self, embeddings, projections, labels, epoch):
+        """
+        Generate and save t-SNE plots and data for embeddings and projections.
+        """
+        if not self.enabled or self.rank != 0:
+            return
+        for i in range(len(embeddings)):
+            
+            # Convert to numpy
+            if isinstance(embeddings[i], torch.Tensor):
+                embedding = embeddings[i].detach().cpu().numpy()
+            if isinstance(projections[i], torch.Tensor):
+                projection = projections[i].detach().cpu().numpy()
+            if isinstance(labels, torch.Tensor):
+                labels = labels.detach().cpu().numpy()
+
+            # Run t-SNE
+            tsne_e = TSNE(n_components=2, perplexity=30, init='pca', learning_rate='auto').fit_transform(embeddings[i])
+            tsne_p = TSNE(n_components=2, perplexity=30, init='pca', learning_rate='auto').fit_transform(projections[i])
+
+            # Save plots
+            self._save_tsne_plot(tsne_e, labels, f"tsne/tsne_embeddings_epoch{epoch}_augmentation{i}.png", title="t-SNE: Encoder Embeddings")
+            self._save_tsne_plot(tsne_p, labels, f"tsne/tsne_projections_epoch{epoch}_augmentation{i}.png", title="t-SNE: Projected Features")
+
+            # Save raw 2D coords
+            df = pd.DataFrame({
+                "x_embed": tsne_e[:, 0],
+                "y_embed": tsne_e[:, 1],
+                "x_proj": tsne_p[:, 0],
+                "y_proj": tsne_p[:, 1],
+                "label": labels
+            })
+            df.to_csv(os.path.join(self.save_dir, f"tsne/tsne_coords_epoch{epoch}_augmentation{i}.csv"), index=False)
+
+            print(f"[t-SNE] Saved encoder and projection plots for epoch {epoch} of Augmentation {i}")
+    
+    def log_gradient(self, model, optimizer, batch_idx, epoch):
         if not self.enabled or self.rank != 0:
             return
 
         # Compute gradient norm and low gradient count
         grad_norm = 0.0
         very_low_grad_count = 0
-        for name, p in model.named_parameters():
+        for _, p in model.named_parameters():
             if p.grad is not None:
                 param_norm = p.grad.data.norm(2)
                 grad_norm += param_norm.item() ** 2
@@ -54,24 +212,18 @@ class TrainingMonitor:
         if very_low_grad_count > 0:
             warnings.warn(f"{very_low_grad_count} parameters have very small update magnitudes at batch {batch_idx}.")
 
-        # Learning rate
-        lr = optimizer.param_groups[0]['lr']
-
         # Append to buffers
-        step = batch_idx + (epoch * 100000 if epoch is not None else 0)
-        self.gradient_norms.append(grad_norm)
-        self.losses.append(loss_value)
-        self.lrs.append(lr)
-        self.low_grad_counts.append(very_low_grad_count)
-        self.batch_indices.append(step)
-
+        step = batch_idx + (epoch * self.batch_size if epoch is not None else 0)
         # Log to TensorBoard
         if self.tb_writer:
-            self.tb_writer.add_scalar("Loss", loss_value, step)
             self.tb_writer.add_scalar("Gradient Norm", grad_norm, step)
-            self.tb_writer.add_scalar("Learning Rate", lr, step)
             self.tb_writer.add_scalar("Low Grad Count", very_low_grad_count, step)
-
+    
+    def log_logits(self, batch_idx, epoch, comb_nr, logits=None):
+        if not self.enabled or self.rank != 0 or not logits:
+            return
+        
+        step = batch_idx + (epoch * self.batch_size if epoch is not None else 0)
         # Log logits if available
         if logits is not None:
             log_min = logits.min().item()
@@ -79,60 +231,109 @@ class TrainingMonitor:
             log_mean = logits.mean().item()
 
             if self.tb_writer:
-                self.tb_writer.add_scalar("Logits/Min", log_min, step)
-                self.tb_writer.add_scalar("Logits/Max", log_max, step)
-                self.tb_writer.add_scalar("Logits/Mean", log_mean, step)
+                self.tb_writer.add_scalar(f"Logits/Min_{comb_nr}", log_min, step)
+                self.tb_writer.add_scalar(f"Logits/Max_{comb_nr}", log_max, step)
+                self.tb_writer.add_scalar(f"Logits/Mean_{comb_nr}", log_mean, step)
+    
+    
+    def _save_tsne_plot(self, tsne_coords, labels, filename, title="t-SNE Plot"):
+        plt.figure(figsize=(7, 6))
+        sns.scatterplot(x=tsne_coords[:, 0], y=tsne_coords[:, 1], hue=labels, palette='tab10', s=10, alpha=0.7, linewidth=0)
+        plt.title(title)
+        plt.xticks([])
+        plt.yticks([])
+        plt.xlabel("")
+        plt.ylabel("")
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0., title="Label", fontsize='small')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.save_dir, filename))
+        plt.close()
 
-            if batch_idx % self.plot_every == 0:
-                print(f"[Logits] Batch {batch_idx} | min: {log_min:.4f}, max: {log_max:.4f}, mean: {log_mean:.4f}")
+        
+    def log_pos_neg_samples(self, positive, negative, comb_nr):
+        if not self.enabled or self.rank != 0:
+            return
+        
+        if self.combs == 1:
+            self.positive_samples.append(positive)
+            self.negative_samples.append(negative.view(-1))
+        else:
+            self.positive_samples[comb_nr].append(positive)
+            self.negative_samples[comb_nr].append(negative.view(-1))
+    
+    def log_losses(self, loss, comb_nr):
+        if not self.enabled or self.rank != 0:
+            return
+        
+        if self.combs == 1:
+            self.comb_losses.append(loss)
+        else:
+            self.comb_losses[comb_nr].append(loss)
+    
+    def _plot_similarity_distributions(self, epoch):
+        if not self.positive_samples or not self.negative_samples:
+            return
+        if self.combs == 1:
+            pos = torch.cat(self.positive_samples).numpy()
+            neg = torch.cat(self.negative_samples).numpy()
 
-        # Plot and save
-        if batch_idx % self.plot_every == 0:
-            self._plot(batch_idx, epoch)
-            self._save_csv()
+            plt.figure(figsize=(8, 5))
+            sns.histplot(pos, bins=50, color='green', label='Positives', stat='density', kde=True)
+            sns.histplot(neg, bins=50, color='red', label='Negatives', stat='density', kde=True)
+            plt.title(f"Similarity Distributions — Epoch {epoch}")
+            plt.xlabel("Cosine Similarity / τ")
+            plt.ylabel("Density")
+            plt.legend()
+            plt.tight_layout()
 
-    def _plot(self, batch_idx, epoch):
-        x = list(self.batch_indices)
+            filename = f"similarity_dist_epoch{epoch}.png"
+            plt.savefig(os.path.join(self.save_dir, filename))
+            plt.close()
 
-        fig, ax1 = plt.subplots(figsize=(8, 5))
-        ax1.set_title(f"Training Monitor — Epoch {epoch}, Batch {batch_idx}")
-        ax1.plot(x, self.gradient_norms, label="Grad Norm", color="tab:blue")
-        ax1.set_ylabel("Gradient Norm", color="tab:blue")
-        ax1.tick_params(axis='y', labelcolor="tab:blue")
+            print(f"[Similarity Plot] Saved {filename}")
+            
+        else:
+            for comb in range(self.combs):
+                pos = torch.cat(self.positive_samples[comb]).numpy()
+                neg = torch.cat(self.negative_samples[comb]).numpy()
 
-        ax2 = ax1.twinx()
-        ax2.plot(x, self.losses, label="Loss", color="tab:red")
-        ax2.set_ylabel("Loss", color="tab:red")
-        ax2.tick_params(axis='y', labelcolor="tab:red")
+                plt.figure(figsize=(8, 5))
+                sns.histplot(pos, bins=50, color='green', label='Positives', stat='density', kde=True)
+                sns.histplot(neg, bins=50, color='red', label='Negatives', stat='density', kde=True)
+                plt.title(f"Similarity Distributions — Epoch {epoch}, Combination {comb}")
+                plt.xlabel("Cosine Similarity / τ")
+                plt.ylabel("Density")
+                plt.legend()
+                plt.tight_layout()
 
-        # Optional: overlay low grad counts
-        fig2, ax3 = plt.subplots(figsize=(8, 4))
-        ax3.set_title("Very Low Gradient Count")
-        ax3.plot(x, self.low_grad_counts, label="Low Grad Count", color="tab:purple")
-        ax3.set_xlabel("Batch")
-        ax3.set_ylabel("Count")
-        ax3.grid(True)
+                filename = f"similarity_dist_epoch{epoch}_comb{comb}.png"
+                plt.savefig(os.path.join(self.save_dir, filename))
+                plt.close()
 
-        fig.tight_layout()
-        fig2.tight_layout()
-
-        filename1 = f"monitor_epoch{epoch}_batch{batch_idx}.png"
-        filename2 = f"low_grad_epoch{epoch}_batch{batch_idx}.png"
-        fig.savefig(os.path.join(self.save_dir, filename1))
-        fig2.savefig(os.path.join(self.save_dir, filename2))
-        plt.close(fig)
-        plt.close(fig2)
-
-    def _save_csv(self):
-        df = pd.DataFrame({
-            "batch": list(self.batch_indices),
-            "loss": list(self.losses),
-            "grad_norm": list(self.gradient_norms),
-            "lr": list(self.lrs),
-            "low_grad_count": list(self.low_grad_counts),
-        })
-        df.to_csv(os.path.join(self.save_dir, "training_log.csv"), index=False)
-
+                print(f"[Similarity Plot] Saved {filename}")
+    
+    def _save_similarity_csv(self, epoch):
+        if not self.positive_samples or not self.negative_samples:
+            return
+        
+        if self.combs == 1:
+            pos = torch.cat(self.positive_samples).numpy()
+            neg = torch.cat(self.negative_samples).numpy()
+            df = pd.DataFrame({
+                "similarity": np.concatenate([pos, neg]),
+                "type": ["positive"] * len(pos) + ["negative"] * len(neg)
+            })
+            df.to_csv(os.path.join(self.save_dir, f"similarities_epoch{epoch}.csv"), index=False)
+        else:
+            for comb in range(self.combs):
+                pos = torch.cat(self.positive_samples[comb]).numpy()
+                neg = torch.cat(self.negative_samples[comb]).numpy()
+                df = pd.DataFrame({
+                    "similarity": np.concatenate([pos, neg]),
+                    "type": ["positive"] * len(pos) + ["negative"] * len(neg)
+                })
+                df.to_csv(os.path.join(self.save_dir, f"similarities_epoch{epoch}_comb{comb}.csv"), index=False)
+            
 class LinearEvaluationMonitor:
     def __init__(self, save_dir, cpt_epoch: int, class_names=None):
         self.save_dir = os.path.join(save_dir, "linear_eval_logs", str(cpt_epoch))

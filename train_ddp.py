@@ -34,7 +34,7 @@ def ddp_setup():
    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
    init_process_group(backend="nccl")
 
-def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
+def gather_from_world(tensor: torch.Tensor) -> torch.Tensor:
     """Gather all projections from the other nodes and GPUs.
 
     Args:
@@ -53,38 +53,48 @@ def gather_projections(tensor: torch.Tensor) -> torch.Tensor:
 
     return torch.cat(gathered, dim=0)
 
-def train(model, optimizer, loss_fn, train_loader, local_rank, monitor, epoch, args):
+def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, monitor, epoch, args):
+    all_embeddings = [[] * args.augmentations]
+    all_projections = [[] * args.augmentations]
+    all_labels = []
     total_loss = 0
     optimizer.zero_grad() # In case Gradient Accumulation is enabled and won't execute in first step
-    for i, (augmentations, _) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
+    for i, (augmentations, labels) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
+        all_labels.append(gather_from_world(labels))
         if args.ga and (i+1) % args.ga_count == 0 or not args.ga or (i+1) == len(train_loader):
             optimizer.zero_grad()
         
-        
-        #with autocast(device_type='cuda'):
-        _, zs = model(augmentations)
+        hs, zs = model(augmentations)
 
+        
+        # For logging purposes only
+        hs_all = []
+        for h in hs:
+            hs_all.append(gather_from_world(h))
+        
         zs_all = []
         for z in zs:
-            zs_all.append(gather_projections(z))
+            zs_all.append(gather_from_world(z))
         
-        for z_i, z_j in combinations(zs_all, 2):
-            loss, logits = loss_fn(z_i, z_j)
+        for comb_nr, (z_i, z_j) in enumerate(combinations(zs_all, 2)):
+            loss, logits, sim, positives, negatives = loss_fn(z_i, z_j)
+            total_loss += loss.item()
+            monitor.log_logits(i, epoch, comb_nr, logits)
+            monitor.log_pos_neg_samples(positives, negatives, comb_nr)
+            monitor.log_losses(loss.item(), comb_nr)
+            if i % 50 == 0:
+                print(f"Step [{i}/{len(train_loader)}]\t Loss: {loss.item()} | Combination {comb_nr}")
+        
+        for i in range(len(hs)):
+            all_embeddings[i].append(hs[i])
+            all_projections[i].append[zs_all[i]]
         
         loss.backward()
 
         if args.grad_clip:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         
-        monitor.log(
-            model=model,
-            loss_value=loss.item(),
-            optimizer=optimizer,
-            batch_idx=i,
-            epoch=epoch,
-            logits=logits
-            )
-        
+        monitor.log_gradient(model, optimizer, i, epoch)
         
         # Gradient Accumulation
         # First Case: Gradient Accumulation is active and the n-th batch is rached which is divisible by ga_count
@@ -93,13 +103,8 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, monitor, epoch, a
         if args.ga and (i+1) % args.ga_count == 0 or not args.ga or (i+1) == len(train_loader):
             optimizer.step()
         
-        
-        total_loss += loss.item()
-        
-        if i % 50 == 0:
-            print(f"Step [{i}/{len(train_loader)}]\t Loss: {loss.item()}")
 
-    return total_loss
+    return total_loss / len(train_loader), sim, all_embeddings, all_projections
 
 
 @record
@@ -127,9 +132,11 @@ def main(args):
     monitor = TrainingMonitor(
         save_dir=f'{BASE_FOLDER}/{args.slurm_job_id}/',
         plot_every=100,
+        batch_size=args.batch_size * dist.get_world_size(),
         maxlen=500,
         enabled=True,
-        rank=local_rank
+        rank=local_rank,
+        n_augments=args.augmentations,
     )
     
     
@@ -193,11 +200,14 @@ def main(args):
         
         start = time.time()
         
-        loss_epoch = train(model, optimizer, loss_fn, train_loader, local_rank, monitor, epoch, args)
+        loss_epoch, sim, all_embeddings, all_projections, all_positives, all_negatives = train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, monitor, epoch, args)
         
         end = time.time()
         
         print(f'Epoch {epoch+1} | Global Rank {global_rank} | Local Rank {local_rank} | Loss: {loss_epoch}')
+        
+        monitor.log_epoch(epoch, all_positives, all_negatives, optimizer.param_groups[0]["lr"], sim)
+        monitor.log_tsne_embeddings(all_embeddings, all_projections)
         
         if scheduler:
             scheduler.step()
