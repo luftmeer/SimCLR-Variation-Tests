@@ -43,4 +43,4 @@
 - ga_count: 8
 
 # Gradient Clipping
-- grad_clip: False
+- grad_clip: True
