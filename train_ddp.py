@@ -210,6 +210,7 @@ def main(args):
         
         monitor.log_epoch(epoch, optimizer.param_groups[0]["lr"], end-start, sim)
         monitor.log_tsne_embeddings(all_embeddings, all_projections, all_labels, epoch)
+        monitor.check_embedding_collapse(all_embeddings, epoch)
         
         if scheduler:
             scheduler.step()
