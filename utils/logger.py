@@ -20,6 +20,7 @@ class TrainingMonitor:
     def __init__(self, save_dir,  batch_size, n_augments=2, plot_every=100, maxlen=500, enabled=True, rank=0):
         self.save_dir = os.path.join(save_dir, "training_logs")
         os.makedirs(self.save_dir, exist_ok=True)
+        os.makedirs(os.path.join(self.save_dir, "tsne"), exist_ok=True)
         self.plot_every = plot_every
         self.rank = rank
         self.enabled = enabled
