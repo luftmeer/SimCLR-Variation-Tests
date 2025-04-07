@@ -145,7 +145,7 @@ def main(args):
 
     train_sampler = DistributedSampler(train_dataset, num_replicas=dist.get_world_size(), rank=local_rank, shuffle=True)
 
-    tiny_subset = torch.utils.data.Subset(train_dataset, indices=[0, 1, 2, 3])
+    tiny_subset = torch.utils.data.Subset(train_dataset, indices=list(range(16)))
     
     train_loader = torch.utils.data.DataLoader(
             tiny_subset,
