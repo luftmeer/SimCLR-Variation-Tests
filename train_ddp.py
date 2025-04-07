@@ -79,7 +79,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
         for i, z in enumerate(zs):
             full_proj = gather_from_world(z)
             zs_all.append(full_proj)
-            all_projections[i].append[full_proj.detach().cpu()]
+            all_projections[i].append(full_proj.detach().cpu())
         
         for comb_nr, (z_i, z_j) in enumerate(combinations(zs_all, 2)):
             loss, logits, sim, positives, negatives = loss_fn(z_i, z_j)
