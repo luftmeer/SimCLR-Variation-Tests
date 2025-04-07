@@ -168,8 +168,8 @@ class TrainingMonitor:
                 labels = labels.detach().cpu().numpy()
 
             # Run t-SNE
-            tsne_e = TSNE(n_components=2, perplexity=30, init='pca', learning_rate='auto').fit_transform(embeddings[i].numpy())
-            tsne_p = TSNE(n_components=2, perplexity=30, init='pca', learning_rate='auto').fit_transform(projections[i].numpy())
+            tsne_e = TSNE(n_components=2, perplexity=30, init='pca', learning_rate='auto').fit_transform(embedding)
+            tsne_p = TSNE(n_components=2, perplexity=30, init='pca', learning_rate='auto').fit_transform(projection)
 
             # Save plots
             self._save_tsne_plot(tsne_e, labels, f"tsne/tsne_embeddings_epoch{epoch}_augmentation{i}.png", title="t-SNE: Encoder Embeddings")
