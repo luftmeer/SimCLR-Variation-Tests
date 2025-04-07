@@ -66,6 +66,8 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
             optimizer.zero_grad()
         
         hs, zs = model(augmentations)
+        sim = torch.nn.functional.cosine_similarity(hs[0], hs[1]).mean()
+        print(f'{sim=}')
 
         
         # For logging purposes only
