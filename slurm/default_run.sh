@@ -13,9 +13,9 @@
 
 #SBATCH --partition=NvidiaAll
 #Number of nodes and tasks per node:
-#SBATCH --nodes=4
+#SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1
-#SBATCH --ntasks=4
+#SBATCH --ntasks=2
 #SBATCh --cpus-per-task=8
 
 resume_flag=""
@@ -145,7 +145,7 @@ EOF
 
 
 # Execute
-srun torchrun --nnodes=4 \
+srun torchrun --nnodes=2 \
     --nproc_per_node=1 \
     --rdzv_id=$RANDOM \
     --rdzv_backend=c10d \
