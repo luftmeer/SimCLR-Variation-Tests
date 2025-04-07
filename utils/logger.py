@@ -317,7 +317,7 @@ class TrainingMonitor:
     def check_embedding_collapse(self, embeddings, epoch=None):
         for emb in embeddings:
             if isinstance(emb, list): emb = torch.cat(emb, dim=0)
-            norms = torch.nn.functional.normalize(emb, dim=1)
+            emb = torch.nn.functional.normalize(emb, dim=1)
             norms = emb.norm(dim=1)
             print(f"\n📉 Embedding Norms{' — Epoch ' + str(epoch) if epoch is not None else ''}:")
             print(f"  Mean norm: {norms.mean():.4f}")
