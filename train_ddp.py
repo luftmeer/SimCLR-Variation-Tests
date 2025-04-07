@@ -61,7 +61,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
     optimizer.zero_grad() # In case Gradient Accumulation is enabled and won't execute in first step
     for i, (augmentations, labels) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
         labels = labels.to(local_rank)
-        all_labels.append(gather_from_world(labels))
+        all_labels.append(gather_from_world(labels).detach().cpu())
         if args.ga and (i+1) % args.ga_count == 0 or not args.ga or (i+1) == len(train_loader):
             optimizer.zero_grad()
         
