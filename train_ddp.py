@@ -54,8 +54,8 @@ def gather_from_world(tensor: torch.Tensor) -> torch.Tensor:
     return torch.cat(gathered, dim=0)
 
 def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, monitor, epoch, args):
-    all_embeddings = [[] * args.augmentations]
-    all_projections = [[] * args.augmentations]
+    all_embeddings = [[] for _ in range(args.augmentations)]
+    all_projections = [[] for _ in range(args.augmentations)]
     all_labels = []
     total_loss = 0
     optimizer.zero_grad() # In case Gradient Accumulation is enabled and won't execute in first step
@@ -70,12 +70,16 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
         
         # For logging purposes only
         hs_all = []
-        for h in hs:
-            hs_all.append(gather_from_world(h))
+        for i, h in enumerate(hs):
+            full_emb = gather_from_world(h)
+            hs_all.append(full_emb)
+            all_embeddings[i].append(full_emb.detach().cpu())
         
         zs_all = []
-        for z in zs:
-            zs_all.append(gather_from_world(z))
+        for i, z in enumerate(zs):
+            full_proj = gather_from_world(z)
+            zs_all.append(full_proj)
+            all_projections[i].append[full_proj.detach().cpu()]
         
         for comb_nr, (z_i, z_j) in enumerate(combinations(zs_all, 2)):
             loss, logits, sim, positives, negatives = loss_fn(z_i, z_j)
@@ -85,10 +89,6 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
             monitor.log_losses(loss.item(), comb_nr)
             if i % 50 == 0:
                 print(f"Step [{i}/{len(train_loader)}]\t Loss: {loss.item()} | Combination {comb_nr}")
-        
-        for i in range(len(hs)):
-            all_embeddings[i].append(hs[i])
-            all_projections[i].append[zs_all[i]]
         
         loss.backward()
 
