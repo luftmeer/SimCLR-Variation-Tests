@@ -148,7 +148,7 @@ def main(args):
     tiny_subset = torch.utils.data.Subset(train_dataset, indices=[0, 1])
     
     train_loader = torch.utils.data.DataLoader(
-            train_dataset,
+            tiny_subset,
             batch_size=args.batch_size,
             shuffle=False,
             drop_last=True,
