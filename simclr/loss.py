@@ -20,11 +20,11 @@ class NTXentLoss(nn.Module):
         #N = 2 * self.batch_size
         N = z_i.shape[0]
         # Dynamically calculate the mask
-        mask = torch.ones((N, N), dtype=bool, device=self.device)
-        mask.fill_diagonal_(0)
-        for i in range(self.batch_size):
-            mask[i, i + self.batch_size] = 0
-            mask[i + self.batch_size, i] = 0
+        mask = torch.ones((2*N, 2*N), dtype=bool, device=self.device)
+        mask.fill_diagonal_(False)
+        for i in range(N):
+            mask[i, i + N] = 0
+            mask[i + N, i] = 0
         
         z = torch.cat((z_i, z_j), dim=0)
         z = nn.functional.normalize(z, dim=1)
