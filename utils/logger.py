@@ -469,6 +469,7 @@ class LinearEvaluationMonitor:
         df.to_csv(os.path.join(self.save_dir, "linear_eval_metrics.csv"), index=False)
         
     def log_tsne(self, features, labels, epoch, prefix="train", logits=False):
+        os.makedirs(os.path.join(self.save_dir, 'tsne', prefix), exist_ok=True)
         print(f"[t-SNE] Computing 2D projection... ({'logits' if logits else 'features'})", flush=True)
         tsne = TSNE(n_components=2, init='pca', random_state=42)
         reduced = tsne.fit_transform(features.detach().cpu().numpy() if logits else features.cpu().numpy())
@@ -492,6 +493,8 @@ class LinearEvaluationMonitor:
 
         tsne_path = os.path.join(
             self.save_dir,
+            'tsne',
+            prefix,
             f"{prefix}_tsne_{'logits' if logits else 'features'}_epoch_{epoch}.png" if prefix else f"tsne_epoch_{epoch}.png"
         )
         plt.savefig(tsne_path, bbox_inches='tight')
@@ -500,6 +503,7 @@ class LinearEvaluationMonitor:
 
 
     def log_confusion_matrix(self, y_true=None, y_pred=None, cm_tensor=None, epoch=0, prefix: str='train'):
+        os.makedirs(os.path.join(self.save_dir, 'confusion_matrix', prefix), exist_ok=True)
         tag = lambda name: f"{prefix}_{name}" if prefix else name
         print("[Confusion Matrix] Generating plot...", flush=True)
         if cm_tensor is not None:
@@ -514,7 +518,7 @@ class LinearEvaluationMonitor:
         disp.plot(ax=ax, cmap='Blues', xticks_rotation=45)
         plt.title(f"Confusion Matrix (Epoch {epoch})")
         #plt.tight_layout()
-        cm_path = os.path.join(self.save_dir, tag(f"confusion_matrix_epoch_{epoch}.png"))
+        cm_path = os.path.join(self.save_dir, 'confusion_matrix', prefix, tag(f"confusion_matrix_epoch_{epoch}.png"))
         plt.savefig(cm_path)
         plt.close()
         print(f"[Confusion Matrix] Saved to {cm_path}", flush=True)
