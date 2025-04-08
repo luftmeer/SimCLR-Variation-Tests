@@ -43,7 +43,7 @@ class NTXentLoss(nn.Module):
         positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).view(full_N, 1)
         #positive_samples = torch.cat((torch.diag(sim, N), torch.diag(sim, -N)), dim=0).view(full_N, 1)
         negative_samples = sim[mask].view(full_N, -1)
-        print(f'{positive_samples.mean().item()=}')
+        #print(f'{positive_samples.mean().item()=}')
         #labels = torch.zeros(N, dtype=torch.long, device=positive_samples.device)
         logits = torch.cat((positive_samples, negative_samples), dim=1).float()
         labels = torch.zeros(logits.size(0), dtype=torch.long, device=logits.device)
