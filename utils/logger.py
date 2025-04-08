@@ -232,7 +232,7 @@ class TrainingMonitor:
             sample_id (int): Index of the sample in the batch to visualize.
             save_dir (str): Directory to save the plot.
         """
-        os.makedirs(os.join.path(self.save_dir, save_dir), exist_ok=True)
+        os.makedirs(os.path.join(self.save_dir, save_dir), exist_ok=True)
 
         probs = torch.nn.functional.softmax(logits, dim=1)
         sample_probs = probs[sample_id].numpy()
