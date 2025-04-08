@@ -87,6 +87,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
             loss, logits, sim, positives, negatives = loss_fn(z_i, z_j)
             total_loss += loss.item()
             monitor.log_logits(i, epoch, comb_nr, logits)
+            monitor.save_logits_softmax_plot(logits, epoch, i)
             monitor.log_pos_neg_samples(positives, negatives, comb_nr)
             monitor.log_losses(loss.item(), comb_nr)
             if i % 50 == 0:

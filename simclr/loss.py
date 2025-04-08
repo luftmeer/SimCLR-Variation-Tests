@@ -43,4 +43,3 @@ class NTXentLoss(nn.Module):
         loss = self.criterion(logits, labels)
         loss /= N
         return loss, logits.detach().cpu(), sim.detach().cpu(), positive_samples.detach().cpu(), negative_samples.detach().cpu()
-        

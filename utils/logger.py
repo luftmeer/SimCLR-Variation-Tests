@@ -221,6 +221,35 @@ class TrainingMonitor:
             self.tb_writer.add_scalar("Gradient Norm", grad_norm, step)
             self.tb_writer.add_scalar("Low Grad Count", very_low_grad_count, step)
     
+    def save_logits_softmax_plot(self, logits, epoch, batch_idx, sample_id=0, save_dir="logits_debug"):
+        """
+        Saves a softmax probability distribution plot of one example's logits.
+        
+        Args:
+            logits (torch.Tensor): Shape (N, num_logits). First column should be positive.
+            epoch (int): Current epoch number.
+            batch_idx (int): Batch index during training.
+            sample_id (int): Index of the sample in the batch to visualize.
+            save_dir (str): Directory to save the plot.
+        """
+        os.makedirs(os.join.path(self.save_dir, save_dir), exist_ok=True)
+
+        probs = torch.nn.functional.softmax(logits, dim=1)
+        sample_probs = probs[sample_id].numpy()
+
+        plt.figure(figsize=(8, 4))
+        sns.barplot(x=list(range(len(sample_probs))), y=sample_probs)
+        plt.title(f"Softmax Distribution — Epoch {epoch}, Batch {batch_idx}, Sample {sample_id}")
+        plt.xlabel("Logit Index (0 = Positive)")
+        plt.ylabel("Probability")
+        plt.tight_layout()
+
+        filename = f"logits_softmax_epoch{epoch}_batch{batch_idx}_sample{sample_id}.png"
+        plt.savefig(os.path.join(save_dir, filename))
+        plt.close()
+
+        print(f"[Logits Debug] Saved softmax plot → {filename}")
+    
     def log_logits(self, batch_idx, epoch, comb_nr, logits=None):
         if not self.enabled or self.rank != 0 or isinstance(logits, type(None)):
             return
