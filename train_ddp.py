@@ -59,10 +59,10 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
     all_labels = []
     total_loss = 0
     optimizer.zero_grad() # In case Gradient Accumulation is enabled and won't execute in first step
-    for i, (augmentations, labels) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
+    for step, (augmentations, labels) in tqdm.tqdm(enumerate(train_loader), desc="Training", total=len(train_loader)):
         labels = labels.to(local_rank)
         all_labels.append(gather_from_world(labels).detach().cpu())
-        if args.ga and (i+1) % args.ga_count == 0 or not args.ga or (i+1) == len(train_loader):
+        if args.ga and (step+1) % args.ga_count == 0 or not args.ga or (step+1) == len(train_loader):
             optimizer.zero_grad()
         
         hs, zs = model(augmentations)
@@ -87,11 +87,11 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
             loss, logits, sim, positives, negatives = loss_fn(z_i, z_j)
             total_loss += loss.item()
             monitor.log_logits(i, epoch, comb_nr, logits)
-            monitor.save_logits_softmax_plot(logits, epoch, i)
+            monitor.save_logits_softmax_plot(logits, epoch, step)
             monitor.log_pos_neg_samples(positives, negatives, comb_nr)
             monitor.log_losses(loss.item(), comb_nr)
             if i % 50 == 0:
-                print(f"Step [{i}/{len(train_loader)}]\t Loss: {loss.item()} | Combination {comb_nr}")
+                print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Combination {comb_nr}")
         
         loss.backward()
 
@@ -104,7 +104,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
         # First Case: Gradient Accumulation is active and the n-th batch is rached which is divisible by ga_count
         # Second Case: Gradient Accumulation is not available -> always do the step
         # Third Case: The current batch is the last one -> always optimize
-        if args.ga and (i+1) % args.ga_count == 0 or not args.ga or (i+1) == len(train_loader):
+        if args.ga and (step+1) % args.ga_count == 0 or not args.ga or (step+1) == len(train_loader):
             optimizer.step()
         
 
