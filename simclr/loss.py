@@ -19,15 +19,18 @@ class NTXentLoss(nn.Module):
         # When distributed, the batch size is world_size times the given config size.
         #N = 2 * self.batch_size
         N = z_i.shape[0]
+        
+        z = torch.cat((z_i, z_j), dim=0)
+        z = nn.functional.normalize(z, dim=1)
+        full_N = z.shape[0]
+        
         # Dynamically calculate the mask
-        mask = torch.ones((2*N, 2*N), dtype=bool, device=self.device)
+        mask = torch.ones((full_N, full_N), dtype=bool, device=self.device)
         mask.fill_diagonal_(False)
         for i in range(N):
             mask[i, i + N] = 0
             mask[i + N, i] = 0
         
-        z = torch.cat((z_i, z_j), dim=0)
-        z = nn.functional.normalize(z, dim=1)
 
         #sim = self.similarity_fn(z.unsqueeze(1), z.unsqueeze(0)) / self.temperature
         sim = torch.matmul(z, z.T) / self.temperature
@@ -35,8 +38,10 @@ class NTXentLoss(nn.Module):
         sim_j_i = torch.diag(sim, -N)# // 2)
 
         # We have 2N samples, but with Distributed training every GPU gets N examples too, resulting in: 2xNxN
-        positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).view(-1, 1) #.reshape(N, 1)
-        negative_samples = sim[mask].reshape(N, -1).view(N, -1)
+        #positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).view(-1, 1) #.reshape(N, 1)
+        #negative_samples = sim[mask].reshape(N, -1).view(N, -1)
+        positive_samples = torch.cat((torch.diag(sim, N), torch.diag(sim, -N)), dim=0).view(full_N, 1)
+        negative_samples = sim[mask].view(full_N, -1)
         print(f'{positive_samples.mean().item()=}')
         labels = torch.zeros(N, dtype=torch.long, device=positive_samples.device)
         logits = torch.cat((positive_samples, negative_samples), dim=1).float()
