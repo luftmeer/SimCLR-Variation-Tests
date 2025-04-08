@@ -245,7 +245,7 @@ class TrainingMonitor:
         plt.tight_layout()
 
         filename = f"logits_softmax_epoch{epoch}_batch{batch_idx}_sample{sample_id}.png"
-        plt.savefig(os.path.join(save_dir, filename))
+        plt.savefig(os.path.join(self.save_dir, save_dir, filename))
         plt.close()
 
         print(f"[Logits Debug] Saved softmax plot → {filename}")
