@@ -35,8 +35,8 @@ class NTXentLoss(nn.Module):
         sim_j_i = torch.diag(sim, -N)# // 2)
 
         # We have 2N samples, but with Distributed training every GPU gets N examples too, resulting in: 2xNxN
-        positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0) #.reshape(N, 1)
-        negative_samples = sim[mask].reshape(N, -1)
+        positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).view(-1, 1) #.reshape(N, 1)
+        negative_samples = sim[mask].reshape(N, -1).view(N, -1)
         print(f'{positive_samples.mean().item()=}')
         labels = torch.zeros(N, dtype=torch.long, device=positive_samples.device)
         logits = torch.cat((positive_samples, negative_samples), dim=1).float()
