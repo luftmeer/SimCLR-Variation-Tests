@@ -106,7 +106,7 @@ class TrainingMonitor:
                     self.tb_writer.add_histogram(f"Epoch/Positive Similarities_{comb}", positives, epoch)
                     self.tb_writer.add_histogram(f"Epoch/Negative Similarities_{comb}", negatives, epoch)   
         
-            if final_similarity is not None and final_similarity.shape[0] <= 128:
+            if final_similarity is not None:
                 self.tb_writer.add_histogram("Epoch/Final_Similarity_Row0", final_similarity[0], epoch)
 
         # CSV export
