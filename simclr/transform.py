@@ -14,6 +14,7 @@ class SimCLRTransform:
                 transforms.RandomHorizontalFlip(p=0.5),
                 transforms.ColorJitter(brightness=0.8*s, contrast=0.8*s, saturation=0.8*s, hue=0.2*s),
                 transforms.RandomGrayscale(p=0.2),
+                transforms.GaussianBlur(kernel_size=int(0.1 * self.size) | 1, sigma=(0.1, 2.0)),
                 transforms.ToTensor()
             ]
         

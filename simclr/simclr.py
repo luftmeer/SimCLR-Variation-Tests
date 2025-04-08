@@ -21,8 +21,10 @@ class SimCLR(nn.Module):
         
         self.projector = nn.Sequential(
             nn.Linear(in_features=n_features, out_features=n_features, bias=False),
+            nn.BatchNorm1d(n_features),
             nn.ReLU(),
-            nn.Linear(in_features=n_features, out_features=projection_dim, bias=False)
+            nn.Linear(in_features=n_features, out_features=projection_dim, bias=False),
+            nn.BatchNorm1d(projection_dim, affine=False)
         )
     # Takes a list of size n (amount of augmentations), encoding and projecting each batch individually. Returning two lists with embeddings and projections
     def forward(self, Xs: list):
