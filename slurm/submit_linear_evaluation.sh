@@ -53,37 +53,44 @@ fi
 # --- Find missing subfolders ---
 echo "Scanning checkpoint directory for unprocessed epochs..."
 
+# --- Loop through checkpoints ---
 for ckpt_file in "$checkpoint_dir"/*.cpt; do
     [[ -e "$ckpt_file" ]] || continue
 
     filename=$(basename "$ckpt_file" .cpt)
 
-    # Extract last underscore-separated field as epoch number
-    epoch_num=$(echo "$filename" | awk -F_ '{print $NF}')
+    # Extract optimizer and checkpoint epoch
+    ckpt_epoch=$(echo "$filename" | sed -E 's/.*_([0-9]+)$/\1/')
 
-    # Check target folder
-    target_folder="${checkpoint_dir}/cpt_epoch${epoch_num}"
-    if [[ ! -d "$target_folder" ]]; then
-        echo "Submitting job for checkpoint: epoch ${epoch_num} (File: ${ckpt_file})"
-
-        slurm_id=$(sbatch --parsable slurm/default_linear_evaluation.sh \
-            --id "$job_id" \
-            --checkpoint "$ckpt_file" \
-            --batch-size "$batch_size" \
-            --optimizer "$optimizer" \
-            --lr "$lr" \
-            --weight-decay "$weight_decay" \
-            --dataset-name "$dataset_name" \
-            --n_classes "$n_classes" \
-            --seed "$seed" \
-            --save-every-epoch "$save_every_epoch" \
-            --ga-count "$ga_count" \
-            --eval-every "$eval_every" \
-            $ga_flag
-        )
-        mkdir -p "./runs/$slurm_id"
-        
-    else
-        echo "✅ Already processed: epoch ${epoch_num}"
+    if [[ -z "$ckpt_epoch" ]]; then
+        echo "⚠️  Skipping malformed checkpoint file: $filename, $ckpt_epoch"
+        continue
     fi
+
+    log_dir="./runs/${job_id}/linear_eval_logs_${optimizer}"
+    processed_folder="${log_dir}/cpt_epoch${ckpt_epoch}"
+
+    if [[ -d "$processed_folder" ]]; then
+        echo "✅ Already processed: epoch ${ckpt_epoch} (${optimizer})"
+        continue
+    fi
+
+    echo "🚀 Submitting job for checkpoint ($filename): epoch ${ckpt_epoch}, optimizer ${optimizer}"
+
+    slurm_id=$(sbatch --parsable slurm/default_linear_evaluation.sh \
+        --id "$job_id" \
+        --checkpoint "$ckpt_file" \
+        --batch-size "$batch_size" \
+        --optimizer "$optimizer" \
+        --lr "$lr" \
+        --weight-decay "$weight_decay" \
+        --dataset-name "$dataset_name" \
+        --n_classes "$n_classes" \
+        --seed "$seed" \
+        --save-every-epoch "$save_every_epoch" \
+        --ga-count "$ga_count" \
+        --eval-every "$eval_every" \
+        $ga_flag
+    )
+    mkdir -p "./runs/$slurm_id"
 done

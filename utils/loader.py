@@ -5,7 +5,7 @@ import argparse
 
 # Base Folder for Checkpoints
 CHECKPOINTS_FOLDER = 'checkpoints'
-EVAL_CPT_FOLDER = 'linear_evaluation'
+EVAL_CPT_FOLDER = 'linear_eval_logs_'
 
 def load_model(path:str, device, eval:bool=False, args_only:bool=False) -> torch.nn:
     if not os.path.exists(path):
@@ -78,16 +78,17 @@ def save_evaluation(simclr_model: torch.nn.Module, model: torch.nn.Module, args:
     path = os.path.join('./', 
                         base_folder if base_folder else '',
                         str(args.slurm_job_id) if args.slurm_job_id else '',
-                        CHECKPOINTS_FOLDER,
+                        f"{EVAL_CPT_FOLDER}{args.optimizer}",
                         f'cpt_epoch{cpt_epoch}')
     os.makedirs(path, exist_ok=True)
      
     filename_content = [args.encoder,
+                        args.optimizer,
                         f'cpt_epoch{cpt_epoch}',
                         f'epoch{epoch+1}',
                     ]
     
-    filename = path + f"/{datetime.now().strftime('%Y%m%d%H%M%S')}-{args.slurm_job_id}_{'_'.join(str(elem) for elem in filename_content)}.eval.cpt"
+    filename = path + f"/{args.slurm_job_id}_{'_'.join(str(elem) for elem in filename_content)}.eval.cpt"
     
     torch.save(
             {
@@ -105,7 +106,7 @@ def save_model_eval(simclr_model: torch.nn.Module, model: torch.nn.Module, args:
     path = os.path.join('./', 
                         base_folder if base_folder else '',
                         str(args.slurm_job_id) if args.slurm_job_id else '',
-                        CHECKPOINTS_FOLDER,
+                        f"{EVAL_CPT_FOLDER}{args.optimizer}",
                         f'cpt_epoch{cpt_epoch}')
     os.makedirs(path, exist_ok=True)
     
@@ -116,7 +117,7 @@ def save_model_eval(simclr_model: torch.nn.Module, model: torch.nn.Module, args:
                         '' if best_model else f'epoch{epoch+1}',
                     ]
     if not best_model:
-        filename = path + f"/{datetime.now().strftime('%Y%m%d%H%M%S')}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
+        filename = path + f"/{'_'.join(str(elem) for elem in filename_content)}.cpt"
     else:
         filename = path + f"/{'_'.join(str(elem) for elem in filename_content)}.cpt.best"
     
