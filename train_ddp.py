@@ -224,7 +224,7 @@ def main(args):
     
     if global_rank == 0:
         print(f"Saving final model at Epoch {epoch+1}")
-        loader.save_model(model=model, optimizer=optimizer, loss=loss_fn, dataset_name=args.dataset_name, epoch=epoch, encoder=args.encoder, args=args)
+        loader.save_model(model=model, optimizer=optimizer, dataset_name=args.dataset_name, epoch=epoch+1, encoder=args.encoder, args=args, base_folder=BASE_FOLDER)
     destroy_process_group()
     
 if __name__ == '__main__':
