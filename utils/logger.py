@@ -532,6 +532,12 @@ class LinearEvaluationMonitor:
         plt.savefig(cm_path)
         plt.close()
         print(f"[Confusion Matrix] Saved to {cm_path}", flush=True)
+        
+        # Store
+        df_cm = pd.DataFrame(cm, index=[f"True_{label}" for label in range(len(self.class_names) if self.class_names else max(y_true)+1)],
+                         columns=[f"Pred_{label}" for label in range(len(self.class_names) if self.class_names else max(y_true)+1)])
+
+        df_cm.to_csv(os.path.join(self.save_dir, 'confusion_matrix', prefix, tag(f"confusion_matrix_epoch_{epoch}.csv")))
 
     def summarize_all_epochs(self, prefix: str='train'):
         csv_path = os.path.join(self.save_dir, "linear_eval_metrics.csv")
