@@ -377,8 +377,8 @@ class TrainingMonitor:
                 df.to_csv(os.path.join(self.save_dir, f"similarities_epoch{epoch}_comb{comb}.csv"), index=False)
             
 class LinearEvaluationMonitor:
-    def __init__(self, save_dir, cpt_epoch: int, class_names=None):
-        self.save_dir = os.path.join(save_dir, "linear_eval_logs", str(cpt_epoch))
+    def __init__(self, save_dir, cpt_epoch: int, class_names=None, optimizer_name: str='SGD'):
+        self.save_dir = os.path.join(save_dir, f"linear_eval_logs_{optimizer_name}", str(cpt_epoch))
         os.makedirs(self.save_dir, exist_ok=True)
         self.class_names = class_names
         self.data = defaultdict(list)
@@ -452,7 +452,9 @@ class LinearEvaluationMonitor:
         self.tb_writer.add_scalar(tag('LearningRate'), lr, epoch)
         self.tb_writer.add_scalar(tag('EvalTime'), eval_time, epoch)
 
-        self.log_tsne(features, labels, epoch, prefix, logits=False)
+        # Features Embedding only once, no change
+        if epoch == 0:
+            self.log_tsne(features, labels, epoch, prefix, logits=False)
         self.log_tsne(logits, labels, epoch, prefix, logits=True)
         self._save_yaml(epoch, prefix)
         self._save_csv()
@@ -500,6 +502,14 @@ class LinearEvaluationMonitor:
         plt.savefig(tsne_path, bbox_inches='tight')
         plt.close()
         print(f"[t-SNE] Saved to {tsne_path}", flush=True)
+        
+        # Save as file
+        df = pd.DataFrame({
+                "x": reduced[:, 0],
+                "y": reduced[:, 1],
+                "label": labels.cpu().numpy()
+            })
+        df.to_csv(os.path.join(self.save_dir, 'tsne', prefix, f"{prefix}_tsne_{'logits' if logits else 'features'}_epoch_{epoch}.csv"), index=False)
 
 
     def log_confusion_matrix(self, y_true=None, y_pred=None, cm_tensor=None, epoch=0, prefix: str='train'):
