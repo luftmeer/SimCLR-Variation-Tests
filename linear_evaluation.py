@@ -152,7 +152,7 @@ def main(args):
     criterion = torch.nn.CrossEntropyLoss()
     
     # Linear Evaluation Monitor
-    monitor = LinearEvaluationMonitor(save_dir=f'./runs/{args.slurm_job_id}', cpt_epoch=cpt_epoch, class_names=train_dataset.classes)
+    monitor = LinearEvaluationMonitor(save_dir=f'./runs/{args.slurm_job_id}', cpt_epoch=cpt_epoch, class_names=train_dataset.classes, optimizer_name=args.optimizer)
     
     # Train
     best_accuracy = 0.
