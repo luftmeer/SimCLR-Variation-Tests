@@ -456,7 +456,7 @@ class LinearEvaluationMonitor:
         if epoch == 0:
             self.log_tsne(features, labels, epoch, prefix, logits=False)
         self.log_tsne(logits, labels, epoch, prefix, logits=True)
-        self._save_yaml(epoch, prefix)
+        #self._save_yaml(epoch, prefix)
         self._save_csv()
         self.summarize_all_epochs(prefix)
 
