@@ -12,6 +12,7 @@ import yaml
 import time
 from itertools import combinations
 import datetime
+import math
 
 # DDP
 from torch.utils.data.distributed import DistributedSampler
@@ -94,6 +95,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
             if i % 50 == 0:
                 print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Combination {comb_nr}")
         
+        full_loss /= math.comb(args.augmentations, 2)
         full_loss.backward()
 
         if args.grad_clip:
