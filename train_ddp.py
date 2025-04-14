@@ -85,6 +85,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
         
         for comb_nr, (z_i, z_j) in enumerate(combinations(zs_all, 2)):
             loss, logits, sim, positives, negatives = loss_fn(z_i, z_j)
+            full_loss = loss
             total_loss += loss.item()
             monitor.log_logits(i, epoch, comb_nr, logits)
             #monitor.save_logits_softmax_plot(logits, epoch, step)
@@ -93,7 +94,7 @@ def train(model, optimizer, loss_fn, train_loader, local_rank, global_rank, moni
             if i % 50 == 0:
                 print(f"Step [{step}/{len(train_loader)}]\t Loss: {loss.item()} | Combination {comb_nr}")
         
-        loss.backward()
+        full_loss.backward()
 
         if args.grad_clip:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
