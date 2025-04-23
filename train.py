@@ -145,7 +145,7 @@ def main(args):
     else:
         start_epoch = 0
     
-    loss_fn = NTXentLoss(batch_size=args.batch_size*dist.get_world_size(), device=device).to(device)
+    loss_fn = NTXentLoss(batch_size=args.batch_size, device=device).to(device)
 
     model.to(device)
     
