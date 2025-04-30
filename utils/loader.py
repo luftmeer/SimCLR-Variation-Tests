@@ -4,34 +4,37 @@ from datetime import datetime
 import argparse
 
 # Base Folder for Checkpoints
-CHECKPOINTS_FOLDER = './checkpoints'
+CHECKPOINTS_FOLDER = 'checkpoints'
+EVAL_CPT_FOLDER = 'linear_eval_logs_'
 
-def load_model(path:str, device:torch.device, eval:bool=False) -> torch.nn:
+def load_model(path:str, device, eval:bool=False, args_only:bool=False) -> torch.nn:
     if not os.path.exists(path):
         raise FileNotFoundError("File or Path not correct")
 
-    cpt = torch.load(path, map_location=device.type, weights_only=False)
+    if isinstance(device, torch.device):
+        cpt = torch.load(path, map_location=device.type, weights_only=False)
+    elif isinstance(device, str):
+        cpt = torch.load(path, map_location=device, weights_only=False)
     
     if eval:
         return cpt['model_state_dict'], cpt['epoch']
     
+    if args_only:
+        return cpt['args']
+    
     return cpt
 
 
-def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: object, dataset_name: str, epoch: int, encoder: str, args:argparse.Namespace) -> None:
-    if not os.path.exists(CHECKPOINTS_FOLDER):
-        os.makedirs(CHECKPOINTS_FOLDER)
-
-    # Create sub folder for dataset name in checkpoint folder, if it doesn't exist yet
-    if not os.path.exists(f"{CHECKPOINTS_FOLDER}/{dataset_name}/"):
-        os.makedirs(f"{CHECKPOINTS_FOLDER}/{dataset_name}/")
+def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, dataset_name: str, epoch: int, encoder: str, args:argparse.Namespace, base_folder: str=None) -> None:
+    path = os.path.join('./', 
+                        base_folder if base_folder else '',
+                        str(args.slurm_job_id) if args.slurm_job_id else '',
+                        CHECKPOINTS_FOLDER)
+    os.makedirs(path, exist_ok=True)
     
-    # Subfolder for Slurm Job
-    if args.slurm_job_id:
-        if not os.path.exists(f"{CHECKPOINTS_FOLDER}/{dataset_name}/{args.slurm_job_id}/"):
-            os.makedirs(f"{CHECKPOINTS_FOLDER}/{dataset_name}/{args.slurm_job_id}/")
-    
-    filename_content = [args.encoder, 
+    filename_content = [args.slurm_job_id,
+                        args.dataset_name,
+                        args.encoder, 
                         args.optimizer, 
                         args.batch_size, 
                         args.augmentations, 
@@ -40,13 +43,7 @@ def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: o
                         epoch+1
                     ]
     
-    filename = f"{CHECKPOINTS_FOLDER}/{dataset_name}"
-    
-    # Subfolder for Slurm Job
-    if args.slurm_job_id:
-        filename = filename + f"/{args.slurm_job_id}"
-    
-    filename = filename + f"/{datetime.now().strftime('%Y%m%d%H%M%S')}-{args.slurm_job_id}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
+    filename = f"{path}" + f"/{datetime.now().strftime('%Y%m%d%H%M%S')}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
     
     if isinstance(model, torch.nn.parallel.DistributedDataParallel):
         torch.save(
@@ -77,31 +74,21 @@ def save_model(model: torch.nn.Module, optimizer: torch.optim.Optimizer, loss: o
     
     return
 
-def save_evaluation(simclr_model: torch.nn.Module, model: torch.nn.Module, args: argparse.Namespace, cpt_epoch: int, epoch: int) -> None:
-    if not os.path.exists(CHECKPOINTS_FOLDER):
-        os.makedirs(CHECKPOINTS_FOLDER)
-
-    # Create sub folder for dataset name in checkpoint folder, if it doesn't exist yet
-    if not os.path.exists(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/"):
-        os.makedirs(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/")
-    
-    # Subfolder for Slurm Job
-    if args.slurm_job_id:
-        if not os.path.exists(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/{args.slurm_job_id}/"):
-            os.makedirs(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/{args.slurm_job_id}/")
-    
+def save_evaluation(simclr_model: torch.nn.Module, model: torch.nn.Module, args: argparse.Namespace, cpt_epoch: int, epoch: int, base_folder: str=None) -> None:
+    path = os.path.join('./', 
+                        base_folder if base_folder else '',
+                        str(args.slurm_job_id) if args.slurm_job_id else '',
+                        f"{EVAL_CPT_FOLDER}{args.optimizer}",
+                        f'cpt_epoch{cpt_epoch}')
+    os.makedirs(path, exist_ok=True)
+     
     filename_content = [args.encoder,
+                        args.optimizer,
                         f'cpt_epoch{cpt_epoch}',
                         f'epoch{epoch+1}',
                     ]
     
-    filename = f"{CHECKPOINTS_FOLDER}/{args.dataset_name}"
-    
-    # Subfolder for Slurm Job
-    if args.slurm_job_id:
-        filename = filename + f"/{args.slurm_job_id}"
-    
-    filename = filename + f"/{datetime.now().strftime('%Y%m%d%H%M%S')}-{args.slurm_job_id}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
+    filename = path + f"/{args.slurm_job_id}_{'_'.join(str(elem) for elem in filename_content)}.eval.cpt"
     
     torch.save(
             {
@@ -115,35 +102,25 @@ def save_evaluation(simclr_model: torch.nn.Module, model: torch.nn.Module, args:
     
     return
 
-def save_model_eval(simclr_model: torch.nn.Module, model: torch.nn.Module, args: argparse.Namespace, cpt_epoch: int, epoch: int, optimizer: torch.optim.Optimizer, best_model: bool=False) -> None:
-    if not os.path.exists(CHECKPOINTS_FOLDER):
-        os.makedirs(CHECKPOINTS_FOLDER)
-
-    # Create sub folder for dataset name in checkpoint folder, if it doesn't exist yet
-    if not os.path.exists(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/"):
-        os.makedirs(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/")
+def save_model_eval(simclr_model: torch.nn.Module, model: torch.nn.Module, args: argparse.Namespace, cpt_epoch: int, epoch: int, optimizer: torch.optim.Optimizer, best_model: bool=False, base_folder: str=None) -> None:
+    path = os.path.join('./', 
+                        base_folder if base_folder else '',
+                        str(args.slurm_job_id) if args.slurm_job_id else '',
+                        f"{EVAL_CPT_FOLDER}{args.optimizer}",
+                        f'cpt_epoch{cpt_epoch}')
+    os.makedirs(path, exist_ok=True)
     
-    # Subfolder for Slurm Job
-    if args.slurm_job_id:
-        if not os.path.exists(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/{args.slurm_job_id}/"):
-            os.makedirs(f"{CHECKPOINTS_FOLDER}/{args.dataset_name}/{args.slurm_job_id}/")
-    
-    filename_content = [args.encoder,
-                        'Adam',
+    filename_content = ['linear-evaluation',
+                        args.encoder,
+                        args.optimizer,
                         f'cpt_epoch{cpt_epoch}',
-                        f'epoch{epoch+1}',
+                        '' if best_model else f'epoch{epoch+1}',
                     ]
+    if not best_model:
+        filename = path + f"/{'_'.join(str(elem) for elem in filename_content)}.cpt"
+    else:
+        filename = path + f"/{'_'.join(str(elem) for elem in filename_content)}.cpt.best"
     
-    filename = f"{CHECKPOINTS_FOLDER}/{args.dataset_name}"
-    
-    # Subfolder for Slurm Job
-    if args.slurm_job_id:
-        filename = filename + f"/{args.slurm_job_id}"
-    
-    filename = filename + f"/{args.slurm_job_id}_{'_'.join(str(elem) for elem in filename_content)}.cpt"
-    
-    if best_model:
-        filename = filename + ".best"
     
     torch.save(
             {

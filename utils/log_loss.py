@@ -5,8 +5,8 @@ import csv
 import torch.distributed as dist
 import socket
 
-def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: float):
-    log_file = f"{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
+def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: float, base_folder: str=None):
+    log_file = f"{'_'.join(str(elem) for elem in [args.dataset_name, args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature])}.csv"
 
     if dist.is_initialized():
         rank = dist.get_rank()
@@ -30,11 +30,11 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
             'elapsed_time': elapsed_time,
         }
 
-    # Shared file path (can be an absolute path if needed)
-    if args.slurm_job_id:
-        log_path = os.path.join(os.getcwd(), 'metrics',  args.dataset_name, str(args.slurm_job_id), log_file)
-    else:
-        log_path = os.path.join(os.getcwd(), 'metrics', args.dataset_name, log_file)
+    log_path = os.path.join(os.getcwd(), 
+                            base_folder if base_folder else '', 
+                            str(args.slurm_job_id) if args.slurm_job_id else '', 
+                            'metrics', 
+                            log_file)
     lock_path = log_path + ".lock"
 
     # Use FileLock to prevent simultaneous write
@@ -48,27 +48,31 @@ def log_loss(epoch: int, loss: object, args: argparse.Namespace, elapsed_time: f
             writer.writerow(row)
 
 
-def log_evaluation(epoch: int, loss, accuracy, args: argparse.Namespace, elapsed_time: float, cpt_epoch: int):
-    log_file = f"{'_'.join(str(elem) for elem in [args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature, f"cpt_epoch{cpt_epoch}"])}.csv"
+def log_evaluation(epoch: int, loss, accuracy, args: argparse.Namespace, elapsed_time: float, cpt_epoch: int, top5, base_folder: str=None, method: str='train'):
+    log_file = f"{'_'.join(str(elem) for elem in ['linear-evaluation', args.dataset_name, args.encoder, args.optimizer, args.epochs, args.batch_size, args.augmentations, args.projection_dim, args.temperature, f"cpt_epoch{cpt_epoch}"])}.csv"
     
     row = {
             'epoch': epoch+1,
+            'method': method,
             'loss': float(loss),
             'accuracy': accuracy,
+            'top5': top5,
             'host': socket.gethostname(),
             'elapsed_time': elapsed_time,
         }
     
-    if args.slurm_job_id:
-        log_path = os.path.join(os.getcwd(), 'metrics',  args.dataset_name, 'linear_evaluation', str(args.slurm_job_id), log_file)
-    else:
-        log_path = os.path.join(os.getcwd(), 'metrics', args.dataset_name, 'linear_evaluation', log_file)
-
-
-    file_exists = os.path.isfile(log_path)
-    with open(log_path, 'a', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=row.keys())
-        if not file_exists:
-            f.write(f"#{str(args)}\n")
-            writer.writeheader()
-        writer.writerow(row)
+    log_path = os.path.join(os.getcwd(), 
+                            base_folder if base_folder else '', 
+                            str(args.slurm_job_id) if args.slurm_job_id else '', 
+                            'metrics',
+                            log_file)
+    lock_path = log_path + ".lock"
+    
+    with FileLock(lock_path):
+        file_exists = os.path.isfile(log_path)
+        with open(log_path, 'a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=row.keys())
+            if not file_exists:
+                f.write(f"#{str(args)}\n")
+                writer.writeheader()
+            writer.writerow(row)
